@@ -1,0 +1,21 @@
+{
+  "name": "risky-replay",
+  "version": "2.1.5",
+  "description": "Online experiment for testing risky sequential decision-making",
+  "main": "index.js",
+  "dependencies": {
+    "@sentry/browser": "^5.7.1",
+    "firebase": "^7.2.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jjmcfadyen/risky-replay.git"
+  },
+  "author": "Jessica McFadyen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jjmcfadyen/risky-replay/issues"
+  },
+  "homepage": "https://github.com/jjmcfadyen/risky-replay#readme"
+}
