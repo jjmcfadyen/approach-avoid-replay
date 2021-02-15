@@ -1,0 +1,16 @@
+﻿Included,MEG_Date,Structure,Firebase_Behavioural_ID,Firebase_MEG_ID,ID,Age,Gender,Handedness,Start_Block_Type,Notes
+TRUE,24/01/2020,pilot,nnxjl3I0beWYQxnZ1zjCTpdEY033,SYPay6sWBofGzIXGvb5YZxSNhKy2,88674,18,M,R,1,Behavioural session aborted due to technical issues.
+TRUE,30/01/2020,pilot,v6kciwTHpbXxDsUGTwXJilZx7iz2,JapuDX0C8VP0gsK2xYD0n0BRUbf2,263098,32,F,R,1,
+TRUE,30/01/2020,pilot,Bqjry3Lh5dOe6mHyXtsn0a78Q653,kfibnpfmmEgNahUJ2Q7C0RFKSWC3,680913,32,M,R,1,"The first three subjects used a pilot version of the experiment structure, which had too many catch trials in the MEG session."
+FALSE,4/2/2020,B,wXeF5scQFcUbsMVx5hzwUKh2yJ93,LJRIJlxEklX1ebxzom6lbZor1gQ2,542599,19,M,R,2,MEG session aborted early due to time. Issues with MEG triggers. Entire dataset excluded.
+TRUE,5/2/2020,A,YcdDHXgXnVY48z1fMQwC8qnJLFf2,V6GaDLOi9SffaaomOC3inpOxacE3,383991,24,F,R,1,Behavioural session aborted early due to time.
+TRUE,7/2/2020,A,EOJRWn3h2Mam44DnDJO96hpSOwq2,4Eim2Z6ZqrdN6X16NquM6PteITP2,707132,30,M,R,1,
+TRUE,6/2/2020,A,,Ojx0tnD0nZeeTVlpk6bT2u4SIRs2,396430,18,F,R,1,Behavioural session not recorded properly.
+TRUE,10/2/2020,B,,2cQR9IgltlYy6sZQub1jrGFEzBm1,521846,18,F,R,2,Behavioural session not recorded properly.
+TRUE,10/2/2020,B,fdog15ZaS3ZRNZKClhfx3c48byM2,5kDGXrN2KTcx57Zedf8ZKmfZvAr1,15397,18,F,R,2,
+TRUE,12/2/2020,A,e8crp4p5VuXzJmtWgYq1PTZRKSB2,NXV8z59sokXl8HX0ODe8aNQT6or1,663186,21,F,R,1,
+TRUE,21/02/2020,B,uQKifj4uTndIuANw7uTQ8sWqTdI2,rHcyqxW38WNRUxvNHJNPGn1frRP2,97403,24,M,R,2,
+TRUE,26/02/2020,B,n1hYr0wbCCaXb2yHgS0tGzIPdcI2,N2Vrii4mMhSCWTqT3ldz7Ig6hfB2,503608,22,F,R,2,
+TRUE,27/02/2020,B,l7eAfwr6n2a4FcW95Wx4aEmoCdG2,zdkMWBU4kFg96dOVJ0O2sp661Rr2,147947,22,F,R,2,
+FALSE,28/02/2020,B,0UmO3g3vEed8wOr4a0pCF6MhNYB2,,223853,,M,,2,Participant excluded after first session due to extremely poor memory performance. 
+TRUE,3/3/2020,B,06CNr0fzmEXyFahtk0yXGawXZ9w1,T4k3668QJZdtRU0Ns1iBAYH2Ear1,506559,20,M,R,2,
