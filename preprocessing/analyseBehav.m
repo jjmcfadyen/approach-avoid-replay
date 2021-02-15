@@ -305,5 +305,11 @@ for subj = 1:length(subjects)
     
 end
 
-save(fullfile(dir_results,'groupBehaviour.mat'),'data'); % wide format
+save(fullfile(dir_results,'groupBehaviour.mat'),'data'); % wide format (.mat)
+
+writetable(...
+    array2table([str2double(subjects) data.questionnaires],'variablenames',...
+    {'Subject','IUS','Worry','Ethical','Financial','Health','Recreational','Social'}),...
+    fullfile(dir_results,'groupBehaviour.csv')); % wide format (CSV)
+
 writetable(T,fullfile(dir_results,'longData.csv')); % long format
