@@ -1,1 +1,0 @@
-Old examples/tutorials haven't been updated in a while, which means they may refer to earlier versions of OSL or require example data not currently shipped with OSL.  
