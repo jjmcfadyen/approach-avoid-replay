@@ -643,30 +643,36 @@ md$Lag <- scale(md$Lag,center=T,scale=F)
 md$EV <- scale(md$EV,center=T,scale=F)
 md$pEV <- scale(md$pEV,center=T,scale=F)
 md$Seq <- scale(md$Seq,center=T,scale=F)
-
+md$Certainty <- scale(md$Certainty,center=T,scale=F)
 
 m1 <- lmer(Seq ~ (1|Subject) + (1|Subject:ExpTrial) + (1|Subject:ExpTrial:Lag) +
-             Val*PathProb, 
+             Val*PathProb + Val*Certainty, 
            data=md, REML=F,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m1)
+round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Std. Error`,`Pr(>|t|)`),3)
 
-round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Pr(>|t|)`),3)
+ss <- sim_slopes(m1,pred=Val,modx=PathProb)
 
 interact_plot(m1,pred=Val,
               modx=PathProb,modx.values=quantile(md$PathProb,seq(0,1,.2)),
-              interval=T,vary.lty=F) + theme_classic() + scale_color_viridis() + scale_fill_viridis() + 
-  ylim(-0.25,0.25)
+              interval=T,vary.lty=F) + theme_classic() +
+              scale_color_viridis() + scale_fill_viridis() + 
+              ylim(-0.25,0.25)
 
+interact_plot(m1,pred=Val,
+              modx=Certainty,modx.values=unique(md$Certainty),
+              interval=T,vary.lty=F) + theme_classic()
 
 
 m2 <- lmer(Seq ~ (1|Subject) + (1|Subject:ExpTrial) + (1|Subject:ExpTrial:Lag) +
-             Val*Choice, 
+             Val*Choice*Certainty, 
            data=md, REML=F,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m2)
+round(select(as.data.frame(summary(m2)$coefficients),Estimate,`Std. Error`,`Pr(>|t|)`),3)
 
 interact_plot(m2,pred=Val,modx=Choice,interval=T) + theme_classic() + ylim(-0.2,0.2)
 
@@ -710,6 +716,10 @@ md$RewVal <- scale(md$RewVal,center=T,scale=F)
 md$RewProb <- scale(md$RewProb,center=T,scale=F)
 md$PathProb <- scale(md$PathProb,center=T,scale=F)
 md$EV <- scale(md$EV,center=T,scale=F)
+md$rEV <- scale(md$rEV,center=T,scale=F)
+md$lEV <- scale(md$lEV,center=T,scale=F)
+md$AccDiff <- scale(md$AccDiff,center=T,scale=F)
+md$Certainty <- scale(md$Certainty,center=T,scale=F)
 
 md$ExpTrial <- scale(md$ExpTrial,center=T,scale=F)
 md$OverallBlock <- scale(md$OverallBlock,center=T,scale=F)
@@ -736,7 +746,8 @@ m1 <- glmer(BinChoice ~ (1|Subject/Lag) +
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m1)
-round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Pr(>|z|)`),3)
+round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Std. Error`,`Pr(>|z|)`),3)
+
 
 m2 <- glmer(BinChoice ~ (1|Subject/Lag) +
               Seq*RewVal*LossVal*RewProb + AvSeq*RewVal*LossVal*RewProb, 
@@ -744,7 +755,8 @@ m2 <- glmer(BinChoice ~ (1|Subject/Lag) +
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m2)
-round(select(as.data.frame(summary(m2)$coefficients),Estimate,`Pr(>|z|)`),3)
+round(select(as.data.frame(summary(m2)$coefficients),Estimate,`Std. Error`,`Pr(>|z|)`),3)
+
 
 effect_plot(m2,pred=Seq,interval=T) + theme_classic() + ylim(.4,.8) + xlim(-3,3)
 
@@ -792,6 +804,15 @@ cl <- pairs(emtrends(m2,
                      )),simple="each")$`simple contrasts for Seq`
 
 
+# show histogram of data
+ggplot(md, aes(x=Seq,color=Choice)) + 
+  geom_histogram() + 
+  facet_wrap(~Subject) +
+  theme_classic()
+
+
+
+# Show effect of experience of rewarding/aversive paths
 m4 <- glmer(BinChoice ~ (1|Subject/Lag) +
               Seq*rew_exp_block + Seq*loss_exp_block + AvSeq*rew_exp_block + AvSeq*loss_exp_block, 
             data=md, family=binomial,
@@ -869,7 +890,7 @@ m1 <- glmer(BinChoice ~ (1|Subject/Lag) +
             data=md, family=binomial,
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 summary(m1)
-round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Pr(>|z|)`),3)
+round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Std. Error`,`Pr(>|z|)`),3)
  
 
 # (risk seeking X EV)
@@ -910,7 +931,8 @@ c_anx <- pairs(emtrends(m1,
 
 
 pd <- md %>% group_by(Subject,Choice) %>% summarise(RiskSeeking = mean(RiskSeeking),
-                                                       Seq = mean(Seq))
+                                                    Anxiety = mean(Anxiety),
+                                                    Seq = mean(Seq))
 pd <- pd %>% group_by(Subject) %>% mutate(Seq_choiceDiff = lag(Seq)-Seq)
 pd <- pd[!is.na(pd$Seq_choiceDiff),]
 
