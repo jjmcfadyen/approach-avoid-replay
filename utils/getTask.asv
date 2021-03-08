@@ -69,7 +69,6 @@ for f = 1:length(fl.data)
             % get response onset (start with 1 but check the others if the RT doesn't match)
             resp_idx = strfindcell(extractfield(minfo.events{trl},'type'),'response','find');
             event_rt = event.table.RT(event.table.ExpTrial == minfo.events{trl}(choice_idx(1)).value);
-            event_choice = event.table.Choice(event.table.ExpTrial == minfo.events{trl}(choice_idx(1)).value);
             rt_matches = false;
             cc = 0;
             while ~rt_matches
@@ -77,16 +76,14 @@ for f = 1:length(fl.data)
                 cc = cc + 1;
                 
                 if cc > length(resp_idx)
-                    error('RT and/or choice does not match up')
+                    error('RT does not match up')
                 end
                 
                 resp_time = minfo.events{trl}(resp_idx(cc)).time;
                 resp_sample = find(abs(D.time{trl}-(resp_time-choice_time)) == min(abs(D.time{trl}-(resp_time-choice_time))));
                 meg_rt = D.time{trl}(resp_sample);
-                
-                meg_choice = minfo.events{trl}(resp_idx(cc)).value;
             
-                rt_matches = abs(event_rt - meg_rt) < .6 & meg_choice == responses(event_choice);
+                rt_matches = abs(event_rt - meg_rt) < .6 && ;
                 
             end
             

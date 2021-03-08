@@ -27,7 +27,6 @@ subjects = sinfo.subjects;
 N = length(subjects);
 
 trainTimes  = 100:10:300; % in ms
-timerange   = 120:10:150; % time windows used for optimisation
 useTime     = [120 130 140]; % which training time(s) to use (if multiple, they are averaged)
 
 epochs = {'decision','transition','image','outcome'};
@@ -81,86 +80,101 @@ for s = 1:N
     fprintf('----------------------------------------------------------------\n')
     fprintf('----------------------------------------------------------------\n')
     
-    t = find(trainTimes == timerange(stimewin(s)));
+    if e == 1 || e == 4
+        t = stimewin(s);
+    elseif e == 2
+        timerange = 120:10:150;
+        t = find(trainTimes == timerange(stimewin(s)));
+    end
     this_lambda = cBL(s,t);
     
     % load info
     [fl,event,in] = pp_cfg(subject,'Task');
     [test, ~] = getTask(subject,fl,event,epoch);
+    
+    % we can use the full decision epoch sequenceness already generated during the optimisation stage
+%     if e == 1 && strcmp(decisionType,'full')
+%         tmp = load(fullfile(dir_load,subject,[subject '_cl_' num2str(trainTimes(t)) 'ms_' epochs{e} '.mat'])); % loads 'criteria', 'sq', 'lidx'
+%         this_sq = squeeze(tmp.sq(this_lambda,:,:,:,:,:));
+%         this_behav = event.table(ismember(event.table.ExpTrial,test.L),:);
+%         this_behav.Subject = repmat({subject},size(this_behav,1),1);
+%         behav = [behav; ...
+%                  this_behav];
+%     else
         
-    % Build classifier & extract optimal lambda
-    classifier = cc_build(subject,trainTimes(t),1,'1vsRest');
-    classifier.B = classifier.B(:,:,this_lambda);
-    classifier.I = classifier.I(:,this_lambda)';
-
-    % Load task data for this subject & epoch
-    in.Fs = test.Fs;
-    nTrls = size(test.L,1);
-
-    % Get behaviour
-    thisT = event.table;
-    if e == 1
-        idx = ismember([thisT.ExpTrial thisT.Choice],test.L,'rows');
-    elseif e == 2
-        idx = ismember([thisT.ExpTrial thisT.Transition],test.L,'rows');
-    elseif e == 4
-        idx = ismember(thisT.ExpTrial,test.L(:,1),'rows');
-    end
-    if sum(idx) ~= nTrls
-        warning([subject ' trials did not match between behaviour and MEG'])
-        missing = ~ismember(test.L,[thisT.ExpTrial thisE],'rows');
-        test.L(missing,:) = [];
-        test.x(:,missing) = [];
-        test.D(:,missing) = [];
+        % Build classifier & extract optimal lambda
+        classifier = cc_build(subject,trainTimes(t),1,'1vsRest');
+        classifier.B = classifier.B(:,:,this_lambda);
+        classifier.I = classifier.I(:,this_lambda)';
+        
+        % Load task data for this subject & epoch
+        in.Fs = test.Fs;
         nTrls = size(test.L,1);
-    end
-    thisT = thisT(idx,:);
-    thisT.Subject = repmat({subject},size(thisT,1),1);
-    if s == 1
-        behav = thisT; 
-    else
-        behav = [behav; thisT];
-    end
-
-    % Edit start time (if applicable)
-    if startTime > 0
-        for trl = 1:nTrls
-             test.D{trl} = test.D{trl}(test.x{trl} > startTime,:);
-             test.x{trl} = test.x{trl}(test.x{trl} > startTime);
+        
+        % Get behaviour
+        thisT = event.table;
+        if e == 1
+            idx = ismember([thisT.ExpTrial thisT.Choice],test.L,'rows');
+        elseif e == 2
+            idx = ismember([thisT.ExpTrial thisT.Transition],test.L,'rows');
+        elseif e == 4
+            idx = ismember(thisT.ExpTrial,test.L(:,1),'rows');
         end
-    end
-
-    % Generate sequenceness
-    this_sq = [];
-    spred{s} = cell(1,nTrls);
-    for trl = 1:nTrls
-
-        if strcmp(epoch,'decision') && strcmp(decisionType,'tails') % take tails
-            for i = 1:2
-                if ischar(decisionRange)
-                    if i ==1
-                        elim = [1 find(test.x{trl} <= mean(test.x{trl}),1,'last')]; % start
-                    elseif i == 2
-                        elim = [find(test.x{trl} > mean(test.x{trl}),1,'first') length(test.x{trl})]; % end
-                    end
-                else
-                    if i ==1
-                        elim = [1 find(test.x{trl} < decisionRange,1,'last')]; % start
-                    elseif i == 2
-                        elim = [find(test.x{trl} >= test.x{trl}(end)-decisionRange,1,'first') length(test.x{trl})]; % end
-                    end
-                end
-
-                thisD = test.D{trl}(elim(1):elim(2),:);
-                pred = cc_predict(thisD,classifier,1,1);
-                this_sq(trl,:,:,:,:,i) = ss_build(pred,U,in);
+        if sum(idx) ~= nTrls
+            warning([subject ' trials did not match between behaviour and MEG'])
+            missing = ~ismember(test.L,[thisT.ExpTrial thisE],'rows');
+            test.L(missing,:) = [];
+            test.x(:,missing) = [];
+            test.D(:,missing) = [];
+            nTrls = size(test.L,1);
+        end
+        thisT = thisT(idx,:);
+        thisT.Subject = repmat({subject},size(thisT,1),1);
+        if s == 1
+            behav = thisT; 
+        else
+            behav = [behav; thisT];
+        end
+        
+        % Edit start time (if applicable)
+        if startTime > 0
+            for trl = 1:nTrls
+                 test.D{trl} = test.D{trl}(test.x{trl} > startTime,:);
+                 test.x{trl} = test.x{trl}(test.x{trl} > startTime);
             end
-        else % generate sequenceness for other epoch (transition, image, outcome)
-            pred = cc_predict(test.D{trl},classifier,1,1);
-            this_sq(trl,:,:,:,:) = ss_build(pred,U,in);
-            spred{s}{trl} = pred;
-        end            
-    end
+        end
+        
+        % Generate sequenceness
+        this_sq = [];
+        for trl = 1:nTrls
+            
+            if strcmp(epoch,'decision') && strcmp(decisionType,'tails') % take tails
+                for i = 1:2
+                    if ischar(decisionRange)
+                        if i ==1
+                            elim = [1 find(test.x{trl} <= mean(test.x{trl}),1,'last')]; % start
+                        elseif i == 2
+                            elim = [find(test.x{trl} > mean(test.x{trl}),1,'first') length(test.x{trl})]; % end
+                        end
+                    else
+                        if i ==1
+                            elim = [1 find(test.x{trl} < decisionRange,1,'last')]; % start
+                        elseif i == 2
+                            elim = [find(test.x{trl} >= test.x{trl}(end)-decisionRange,1,'first') length(test.x{trl})]; % end
+                        end
+                    end
+                    
+                    thisD = test.D{trl}(elim(1):elim(2),:);
+                    pred = cc_predict(thisD,classifier,1,1);
+                    this_sq(trl,:,:,:,:,i) = ss_build(pred,U,in);
+                end
+            else % generate sequenceness for other epoch (transition, image, outcome)
+                pred = cc_predict(test.D{trl},classifier,1,1);
+                this_sq(trl,:,:,:,:) = ss_build(pred,U,in);
+                spred{trl} = pred;
+            end            
+        end
+%     end
     
     if s == 1
         sq = this_sq;
@@ -176,11 +190,9 @@ for s = 1:N
 end
 clear this_sq
 clear tmp
-clear pred
 
 save(fullfile(dir_seq,['behavTable_' epochs{e} '.mat']),'behav');
 save(fullfile(dir_seq,['sq_' epochs{e} '.mat']),'sq');
-save(fullfile(dir_seq,['pred_' epochs{e} '.mat']),'spred');
 
 % load(fullfile(dir_seq,['sq_' epochs{e} '.mat']));
 
