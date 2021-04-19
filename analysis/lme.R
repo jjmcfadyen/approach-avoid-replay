@@ -36,14 +36,14 @@ qs <- read.csv("questionnaire_PCA.csv")
 
 # ------------------------------------------------------------------------------
 
-lagRange <- c(20,80)
+lagRange <- c(10,90) # higher than, less than (not including!)
 
 setwd("D:/Files/2020_RiskyReplay/2021")
 
 # --- load planning period
 if (epoch == "decision" | epoch=="transition"){
   if (!dohalves) {
-    d <- read.csv(paste("longSeq_decision_withCatch_withBetas.csv",sep=""))
+    d <- read.csv(paste("longSeq_decision_withCatch.csv",sep=""))
   } else if (dohalves & epoch=="decision") {
     tmp1 <- read.csv(paste("longSeq_decision-firsthalf.csv",sep=""))
     tmp1$Part <- rep("first",dim(tmp1)[1])
@@ -156,12 +156,12 @@ d$pEV[idx] = d$RewVal[idx] * d$PathProb[idx]
 idx <- d$Path=="aversive"
 d$pEV[idx] = d$LossVal[idx] * d$PathProb[idx]
 
-d$Certainty <- d$P
-d$Certainty[d$P==.1] = .9
-d$Certainty[d$P==.3] = .7
-
 d$RewProb <- round(d$RewProb,1)
 d$PathProb <- round(d$PathProb,1)
+
+d$Certainty <- d$RewProb
+d$Certainty[d$Certainty==.1] = .9
+d$Certainty[d$Certainty==.3] = .7
 
 d$CatRewProb <- round(d$RewProb,1)
 d$CatRewProb[d$RewProb==.1 | d$RewProb==.3] = "A_unlikely"
@@ -325,6 +325,7 @@ d$AccDiff[d$Choice == "risky" & d$Acc==1 & !is.na(d$Acc)]  = d$EV[d$Choice == "r
 d$AccDiff[d$Choice == "risky" & d$Acc==0 & !is.na(d$Acc)]  = d$EV[d$Choice == "risky" & d$Acc==0 & !is.na(d$Acc)] + 1
 d$AccDiff[d$Choice == "safe" & d$Acc==1 & !is.na(d$Acc)] = (d$EV[d$Choice == "safe" & d$Acc==1 & !is.na(d$Acc)] * (-1)) + 1
 d$AccDiff[d$Choice == "safe" & d$Acc==0 & !is.na(d$Acc)] = (d$EV[d$Choice == "safe" & d$Acc==0 & !is.na(d$Acc)] - 1) * (-1)
+
 
 d$IP <- rep(NA,dim(d)[1])
 d$bIP <- rep(NA,dim(d)[1])
@@ -497,9 +498,10 @@ md$LossVal <- scale(abs(md$LossVal),scale=F,center=T)
 md$RewProb <- scale(md$RewProb,scale=F,center=T)
 md$RiskSeeking <- scale(md$RiskSeeking,scale=F,center=T)
 md$Anxiety <- scale(md$Anxiety,scale=F,center=T)
+md$Certainty <- scale(md$Certainty,scale=F,center=T)
 
 m1 <- glmer(BinChoice ~ (1|Subject) + 
-              RewVal*LossVal*RewProb, 
+              RewVal*LossVal*RewProb + RewVal*LossVal*Certainty, 
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
@@ -512,6 +514,15 @@ interact_plot(m1,pred=RewProb,modx=RewVal,
               vary.lty=F,colors=c("#C970FF","#00B2FF","#1EFFA0")) + 
   theme_classic() + ylim(0,1)
 interact_plot(m1,pred=RewProb,modx=LossVal,
+              interval=T,modx.values=quantile(md$LossVal,c(.05,.5,.95)),
+              vary.lty=F,colors=c("#FFD500","#FF7C00","#FF0087")) + 
+  theme_classic() + ylim(0,1)
+
+interact_plot(m1,pred=Certainty,modx=RewVal,
+              interval=T,modx.values=quantile(md$RewVal,c(.05,.5,.95)),
+              vary.lty=F,colors=c("#C970FF","#00B2FF","#1EFFA0")) + 
+  theme_classic() + ylim(0,1)
+interact_plot(m1,pred=Certainty,modx=LossVal,
               interval=T,modx.values=quantile(md$LossVal,c(.05,.5,.95)),
               vary.lty=F,colors=c("#FFD500","#FF7C00","#FF0087")) + 
   theme_classic() + ylim(0,1)
@@ -636,7 +647,7 @@ if (removeOutliers) {
 }
 
 md$Val <- scale(md$Val,center=T,scale=F)
-md$sRewProb <- scale(md$RewProb,center=T,scale=F)
+md$RewProb <- scale(md$RewProb,center=T,scale=F)
 md$PathProb <- scale(md$PathProb,center=T,scale=F)
 md$ExpTrial <- scale(md$ExpTrial,center=T,scale=F)
 md$Lag <- scale(md$Lag,center=T,scale=F)
@@ -646,35 +657,56 @@ md$Seq <- scale(md$Seq,center=T,scale=F)
 md$Certainty <- scale(md$Certainty,center=T,scale=F)
 
 m1 <- lmer(Seq ~ (1|Subject) + (1|Subject:ExpTrial) + (1|Subject:ExpTrial:Lag) +
-             Val*PathProb + Val*Certainty, 
+             Val*RewProb + Val*Certainty, 
            data=md, REML=F,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m1)
+round(range(vif(m1)),3)
 round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Std. Error`,`Pr(>|t|)`),3)
 
 ss <- sim_slopes(m1,pred=Val,modx=PathProb)
 
-interact_plot(m1,pred=Val,
-              modx=PathProb,modx.values=quantile(md$PathProb,seq(0,1,.2)),
+interact_plot(m1,pred=RewProb,
+              modx=Val,modx.values=quantile(md$Val,seq(0,1,.25)),
               interval=T,vary.lty=F) + theme_classic() +
-              scale_color_viridis() + scale_fill_viridis() + 
-              ylim(-0.25,0.25)
+              scale_color_viridis() + scale_fill_viridis()
 
-interact_plot(m1,pred=Val,
-              modx=Certainty,modx.values=unique(md$Certainty),
-              interval=T,vary.lty=F) + theme_classic()
+interact_plot(m1,pred=Certainty,
+              modx=Val,modx.values=quantile(md$Val,seq(0,1,.25)),
+              interval=T,vary.lty=F) + theme_classic() +
+  scale_color_viridis() + scale_fill_viridis()
+
+
+# NOTE: need to select the dataset again for each one, filtering for either
+# <= 50% or >= 50% reward probability. This is so that the centering is done
+# for each dataset individually.
+m1a <- lmer(Seq ~ (1|Subject) + (1|Subject:ExpTrial) + (1|Subject:ExpTrial:Lag) +
+             Val*RewProb, 
+           data=filter(md,RewProb <= quantile(md$RewProb,.5)), REML=F,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+m1b <- lmer(Seq ~ (1|Subject) + (1|Subject:ExpTrial) + (1|Subject:ExpTrial:Lag) +
+              Val*RewProb, 
+            data=filter(md,RewProb >= quantile(md$RewProb,.5)), REML=F,
+            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m1a)
+summary(m1b)
+
+
+
 
 
 m2 <- lmer(Seq ~ (1|Subject) + (1|Subject:ExpTrial) + (1|Subject:ExpTrial:Lag) +
-             Val*Choice*Certainty, 
+             Val*Choice, 
            data=md, REML=F,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m2)
 round(select(as.data.frame(summary(m2)$coefficients),Estimate,`Std. Error`,`Pr(>|t|)`),3)
 
-interact_plot(m2,pred=Val,modx=Choice,interval=T) + theme_classic() + ylim(-0.2,0.2)
+interact_plot(m2,pred=Val,modx=Choice,
+              interval=T, vary.lty=F) + 
+  theme_classic()
 
 ss <- sim_slopes(m2,pred=Val,modx=Choice)
 
@@ -689,7 +721,8 @@ md <- filter(d,Direction=="fwdbwd",
              Forced==FALSE,
              Path=="differential",
              Subject!="263098",
-             Subject!="680913"
+             Subject!="680913",
+             Catch==F
 )
 
 md <- md %>%
@@ -748,9 +781,10 @@ m1 <- glmer(BinChoice ~ (1|Subject/Lag) +
 summary(m1)
 round(select(as.data.frame(summary(m1)$coefficients),Estimate,`Std. Error`,`Pr(>|z|)`),3)
 
+effect_plot(m1,pred=Seq,interval=T) + theme_classic() + ylim(.45,.75) + xlim(-3,3)
 
 m2 <- glmer(BinChoice ~ (1|Subject/Lag) +
-              Seq*RewVal*LossVal*RewProb + AvSeq*RewVal*LossVal*RewProb, 
+              Seq*EV*Certainty, 
             data=md, family=binomial,
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
@@ -758,72 +792,61 @@ summary(m2)
 round(select(as.data.frame(summary(m2)$coefficients),Estimate,`Std. Error`,`Pr(>|z|)`),3)
 
 
-effect_plot(m2,pred=Seq,interval=T) + theme_classic() + ylim(.4,.8) + xlim(-3,3)
 
-
-interact_plot(m2,pred=RewProb,
-              modx=RewVal,modx.values=quantile(md$RewVal,c(.05,.5,.95)),
-              mod2=Seq,mod2.values=quantile(md$Seq,c(.05,.5,.95)),
-              interval=T,vary.lty=F,colors=c("#C970FF","#00B2FF","#1EFFA0")) + 
+interact_plot(m2,pred=EV,
+              modx=Seq,modx.values=quantile(md$Seq,c(.05,.95)),
+              interval=T,vary.lty=F,colors=c("#FF0070","#00F598")) + 
   theme_classic()
 
-interact_plot(m2,pred=RewProb,
-              modx=LossVal,modx.values=quantile(md$LossVal,c(.05,.5,.95)),
-              mod2=Seq,mod2.values=quantile(md$Seq,c(.05,.5,.95)),
-              interval=T,vary.lty=F,colors=c("#FFD500","#FF7C00","#FF0087")) + 
+interact_plot(m2,pred=Certainty,
+              modx=Seq,modx.values=quantile(md$Seq,c(.05,.95)),
+              interval=T,vary.lty=F,colors=c("#FF0070","#00F598")) + 
   theme_classic()
 
 
-m3 <- glmer(BinChoice ~ (1|Subject/Lag) +
-              Seq*EV + AvSeq*EV, 
-            data=md, family=binomial,
-            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-
-summary(m3)
-round(select(as.data.frame(summary(m3)$coefficients),Estimate,`Pr(>|z|)`),3)
-
-interact_plot(m3,pred=EV,
-              modx=AvSeq,modx.values=quantile(md$AvSeq,c(.05,.95)),
-              interval=T,vary.lty=F) + theme_classic()
-
-# --- contrasts
-# https://stats.stackexchange.com/questions/483488/comparing-simple-slopes-with-one-another-in-r
-
-cr <- pairs(emtrends(m2,
-                     ~ Seq | RewVal, var="RewProb",
-                     at = data.frame(
-                       Seq=quantile(md$Seq,c(.05,.5,.95)),
-                       RewVal=quantile(md$RewVal,c(.05,.5,.95))
-                     )),simple="each")$`simple contrasts for Seq`
-
-cl <- pairs(emtrends(m2,
-                     ~ Seq | LossVal, var="RewProb",
-                     at = data.frame(
-                       Seq=quantile(md$Seq,c(.05,.5,.95)),
-                       LossVal=quantile(md$LossVal,c(.05,.5,.95))
-                     )),simple="each")$`simple contrasts for Seq`
+# # --- contrasts
+# # https://stats.stackexchange.com/questions/483488/comparing-simple-slopes-with-one-another-in-r
+# 
+# cr <- pairs(emtrends(m2,
+#                      ~ Seq | RewVal, var="RewProb",
+#                      at = data.frame(
+#                        Seq=quantile(md$Seq,c(.05,.5,.95)),
+#                        RewVal=quantile(md$RewVal,c(.05,.5,.95))
+#                      )),simple="each")$`simple contrasts for Seq`
+# 
+# cl <- pairs(emtrends(m2,
+#                      ~ Seq | LossVal, var="RewProb",
+#                      at = data.frame(
+#                        Seq=quantile(md$Seq,c(.05,.5,.95)),
+#                        LossVal=quantile(md$LossVal,c(.05,.5,.95))
+#                      )),simple="each")$`simple contrasts for Seq`
 
 
 # show histogram of data
-ggplot(md, aes(x=Seq,color=Choice)) + 
-  geom_histogram() + 
-  facet_wrap(~Subject) +
-  theme_classic()
+pd <- md %>% group_by(Subject,Choice) %>% summarise(Seq = mean(Seq))
+pd$Diff <- round(ave(pd$Seq, factor(pd$Subject), FUN=function(x) c(diff(x),diff(x))),3)
 
+ggplot(md, aes(x=Seq,color=Choice,fill=Choice)) + 
+  geom_histogram(alpha=.5) + 
+  geom_vline(data=pd,aes(xintercept=Seq,color=Choice),size=1.1) + 
+  facet_wrap(~Diff) +
+  theme_classic() + 
+  scale_color_manual(values=c("#FFA600","#AD43FF")) + 
+  scale_fill_manual(values=c("#FFA600","#AD43FF")) + xlim(-3,3)
 
 
 # Show effect of experience of rewarding/aversive paths
 m4 <- glmer(BinChoice ~ (1|Subject/Lag) +
-              Seq*rew_exp_block + Seq*loss_exp_block + AvSeq*rew_exp_block + AvSeq*loss_exp_block, 
+              Seq*rew_exp_block + Seq*loss_exp_block, 
             data=md, family=binomial,
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 summary(m4)
 
-interact_plot(m4,pred=loss_exp_block,modx=Seq,modx.values=quantile(md$Seq,c(.05,.5,.95)),
-              interval=T,vary.lty=F,colors=c("#FF0074","#00F08A")) + theme_classic() + ylim(0.3,1)
+interact_plot(m4,pred=loss_exp_block,modx=Seq,modx.values=quantile(md$Seq,c(.05,.95)),
+              interval=T,vary.lty=F,colors=c("#FF0074","#00F08A")) + theme_classic()
 
-interact_plot(m4,pred=rew_exp_block,modx=Seq,modx.values=quantile(md$Seq,c(.05,.5,.95)),
-              interval=T,vary.lty=F,colors=c("#FF0074","#00F08A")) + theme_classic() + ylim(0.3,1)
+interact_plot(m4,pred=rew_exp_block,modx=Seq,modx.values=quantile(md$Seq,c(.05,.95)),
+              interval=T,vary.lty=F,colors=c("#FF0074","#00F08A")) + theme_classic()
 
 # individual differences
 
@@ -832,7 +855,8 @@ md <- filter(d,Direction=="fwdbwd",
              Forced==FALSE,
              Path=="differential",
              Subject!="263098",
-             Subject!="680913"
+             Subject!="680913",
+             Catch==F
 )
 
 md <- md %>%
@@ -878,15 +902,8 @@ md$AvSeq <- scale(md$AvSeq,center=T,scale=F)
 
 # as fixed effects
 
-m0 <- glmer(BinChoice ~ (1|Subject/Lag) +
-              EV, 
-            data=md, family=binomial,
-            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-effect_plot(m0,pred=EV,interval=T) + theme_classic() + xlim(-10,10)
-
 m1 <- glmer(BinChoice ~ (1|Subject/Lag) +
-              Seq*RiskSeeking*EV + Seq*Anxiety*EV +
-              AvSeq*RiskSeeking*EV + AvSeq*Anxiety*EV, 
+              Seq*RiskSeeking*EV + Seq*Anxiety*EV, 
             data=md, family=binomial,
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 summary(m1)
