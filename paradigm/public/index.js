@@ -145,7 +145,7 @@ window.startExp = function() {
     return;
   }
 
-  imagelist = document.getElementById("input-imagelist").value.split(',');
+  imagelist = document.getElementById("input-imagelist").value.split(' ');
 
   if (document.getElementById("input-subjectID").value != "") {
     subjectID = document.getElementById("input-subjectID").value;
@@ -160,7 +160,6 @@ window.startExp = function() {
 
   // Load experiment info
   parameters = loadParameters(); // load experiment parameters (e.g. trial timing, debug mode, etc.)
-  parameters.state_images.all_states = imagelist.map(x => x.trim());
 
   if (sesstype == "meg") {
     parameters.exp_variables.meg_mode = true;
@@ -170,6 +169,10 @@ window.startExp = function() {
     parameters.exp_variables.questionnaires = true;
   }
   parameters.exp_variables.structure_type = structype;
+
+  if (imagelist[0]!="") {
+    parameters.state_images.all_states = imagelist;
+  }
 
   timeline = loadTimeline(parameters, db, uid);
 

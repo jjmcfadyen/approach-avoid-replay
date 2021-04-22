@@ -157,11 +157,11 @@ jsPsych.plugins["value-test"] = (function() {
       if (question_number == 1) {
         this_state = jsPsych.randomization.shuffle([0, 1, 2])[0]; // which state to ask about
         response.first_state = this_state;
-        probe_question = 'How many oxygen cylinders did you find in this room?';
+        probe_question = 'How many oxygen points did you gain/lose in this room?';
       } else {
         this_state = jsPsych.randomization.shuffle([0, 1, 2].filter(x => x != response.first_state))[0]; // don't ask about state already probed
         response.second_state = this_state;
-        probe_question = 'After leaving this room, how many oxygen cylinders would you be carrying?<br>(i.e. what would the CUMULATIVE SUM be?)';
+        probe_question = 'After leaving this room, how many oxygen points would you have?<br>(i.e. what would the CUMULATIVE SUM be?)';
       }
       let this_img = trial.stimuli_info.seq_array[trial.this_seq][this_state]; // name of that state
       let this_img_filename = trial.stimuli_info.seq_array_filenames[trial.this_seq][this_state];
@@ -356,8 +356,8 @@ jsPsych.plugins["value-test"] = (function() {
       for (let i = 0; i < 3; i++) {
         probe_images += '<img src="' + trial.stimuli_info.seq_array_filenames[trial.this_seq][i] + '" alt="' + trial.stimuli_info.seq_array[trial.this_seq][i] + '">';
         if (i == 0) {
-          these_state_values += '<div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Found: </p><p style="width:100%; text-align:center;">' + trial.this_val[trial.this_seq][i] + '</p></div>';
-          these_cumulative_values += '<div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Carrying: </p><p style="width:100%; text-align:center;"><strong>' + cumulative_vals[i] + '</strong></p></div>';
+          these_state_values += '<div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Gained/lost: </p><p style="width:100%; text-align:center;">' + trial.this_val[trial.this_seq][i] + '</p></div>';
+          these_cumulative_values += '<div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Total sum: </p><p style="width:100%; text-align:center;"><strong>' + cumulative_vals[i] + '</strong></p></div>';
         } else {
           these_state_values += '<p style="width:33%; text-align:center;">' + trial.this_val[trial.this_seq][i] + '</p>';
           these_cumulative_values += '<p style="width:33%; text-align:center;"><strong>' + cumulative_vals[i - 1] + ' + ' + trial.this_val[trial.this_seq][i] + ' = ' + cumulative_vals[i] + '</strong></p>';
@@ -397,7 +397,7 @@ jsPsych.plugins["value-test"] = (function() {
       }
 
       display_element.innerHTML = '<div class="instructions-background"><div id="value-content">' +
-        text_header + '<p>After leaving this room, how many oxygen cylinders would you be carrying?<br>(i.e. what would the CUMULATIVE sum be?)</p>' +
+        text_header + '<p>After leaving this room, how many oxygen points would you have?<br>(i.e. what would the CUMULATIVE sum be?)</p>' +
         '<div id="value-image-container"' + small_image + '><img src="' + this_img_filename + '" alt="' + response.second_img + '" height="100%" width="auto"></div>' +
         btn_html +
         '<p id="outcome-text" style="opacity:0; animation: fadeIn 0.3s ease-in forwards; font-weight:600; color:rgb(255, 60, 60); text-align:center;">Incorrect. You would have ' + correct_val + '</p>' +

@@ -413,7 +413,7 @@ input[id="diagnosis-yes"]:checked~.elaborate-diagnosis {
 
 /* INSTRUCTIONS SCREENS */
 
-#instructions-container, #exploration-test-container, #choice-container { /* MEG MODE */
+#instructions-container, #exploration-test-container, #choice-container {
   max-width: 90vw;
   max-height: 80vh;
   position: fixed;
@@ -574,9 +574,10 @@ input[id="diagnosis-yes"]:checked~.elaborate-diagnosis {
 
 .state-btn {
   background: rgba(0,0,0,0);
-  min-height: 100%;
+  height: 100%;
   width: auto;
   border: 0px;
+  cursor: pointer;
 }
 
 .state-btn:disabled {

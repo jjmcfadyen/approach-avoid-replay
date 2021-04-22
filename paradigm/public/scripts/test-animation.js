@@ -310,8 +310,8 @@ jsPsych.plugins["test-animation"] = (function() {
           trial.trial_duration[0] = trial.trial_duration[0] + 2;
 
           // trial.trial_duration += 2; // add time the trial duration
-          outcome_text1 = '<p id="bottom-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + animation_delay[0] + 's forwards; color:' + outcome_color + '; text-align:center;"><strong>' + plus_sign + outcome_val + ' oxygen point' + plural + '.</strong></p>';
-          outcome_text2 = '<p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + (animation_delay[0]+1) + 's forwards; color:rgb(255, 216, 0); text-align:center;">You left with an <strong>odd number of points!</strong></p>';
+          outcome_text1 = '<p id="bottom-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + animation_delay[0] + 's forwards; color:' + outcome_color + '; text-align:center;"><strong>' + plus_sign + outcome_val + ' point' + plural + '.</strong></p>';
+          outcome_text2 = '<p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + (animation_delay[0]+1) + 's forwards; color:rgb(255, 216, 0); text-align:center;"><strong>HAZARD ROOM</strong>: Total sum is an <strong>odd number</strong>. <i><strong>Reversing sum...</strong></i></p>';
           trial.trial_duration[1] = trial.trial_duration[1] + 1;
         }
         html += outcome_text1 + outcome_text2 + '</div>';
@@ -320,7 +320,7 @@ jsPsych.plugins["test-animation"] = (function() {
         var font_end = outcome_val > 0 ? '</font>' : '';
         if (trial.is_practice != 0) {
           html = '<div class="choice-background"><h2 style="text-align:center;">SUPPLY ROOM</h2>' +
-            '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;">You go to the supply room.</p><p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + animation_delay[1] + 's forwards; text-align:center;"><strong>' + plus_sign + outcome_val + ' oxygen point' + plural + '.' + font_end + '</strong></p>' +
+            '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;">You go to the supply room.</p><p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + animation_delay[1] + 's forwards; text-align:center;"><strong>' + plus_sign + outcome_val + ' point' + plural + '.' + font_end + '</strong></p>' +
             '</div>';
           trial.trial_duration[1] = trial.trial_duration[1] + 6;
         } else {
@@ -330,7 +330,7 @@ jsPsych.plugins["test-animation"] = (function() {
           } else {
             html = '<div class="choice-background"><h2 style="text-align:center;">SUPPLY ROOM</h2 style="text-align:center;">';
           }
-          html += '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;"></p><p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in forwards; text-align:center;"><strong>You collected ' + plus_sign + outcome_val + ' oxygen cylinder' + plural + '.' + font_end + '</strong></p>' +
+          html += '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;"></p><p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in forwards; text-align:center;"><strong>You collected ' + plus_sign + outcome_val + ' point' + plural + '.' + font_end + '</strong></p>' +
             '</div>';
         }
         button_names = ["Return"];
@@ -338,7 +338,7 @@ jsPsych.plugins["test-animation"] = (function() {
         plus_sign = outcome_val > 0 ? '<font color="#38ff46">+' : '';
         font_end = outcome_val > 0 ? '</font>' : '';
         html = '<div class="choice-background">' +
-          '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;">You return to the control room with: <strong>' + plus_sign + outcome_val + ' oxygen point' + plural + '.' + font_end + '</strong></p>' +
+          '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;">You return to the control room with: <strong>' + plus_sign + outcome_val + ' point' + plural + '.' + font_end + '</strong></p>' +
           '</div>';
         change_score = false;
         if (trial.is_practice == 2){
@@ -392,7 +392,7 @@ jsPsych.plugins["test-animation"] = (function() {
 
       var score_html = '';
       score_html = trial.stim_num == 0 ? '<div id="carry-score" style="animation: fadeIn 0.3s ease-in forwards;">' : '<div id="carry-score">';
-      var score_text = 'Currently carrying';
+      var score_text = 'Total sum';
       if (trial.stim_num == 3){
         score_text = 'Outcome';
       }
@@ -415,7 +415,7 @@ jsPsych.plugins["test-animation"] = (function() {
           total_acc = acc_array.filter(x => x != null).reduce((a, b) => a + b, 0);
         }
         score_colour = total_acc > 0 ? 'rgb(34, 255, 63)' : total_acc < 0 ? 'rgb(240, 0, 0)' : '';
-        total_score += '<div id="oxygen-score"><p>Oxygen collected = </p><p style="color:' + score_colour + ';"><strong><big> ' + total_acc + '</big></strong></p></div>';
+        total_score += '<div id="oxygen-score"><p>Points collected = </p><p style="color:' + score_colour + ';"><strong><big> ' + total_acc + '</big></strong></p></div>';
       }
 
       // display stimulus

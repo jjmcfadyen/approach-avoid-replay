@@ -94,7 +94,6 @@ jsPsych.plugins.localiser = (function() {
 
     console.log("LOCALISER: BLOCK " + (trial.block_num+1) + ", TRIAL " + (trial.trial_num+1));
 
-    const parameters = loadParameters();
     trial.choices = Array.isArray(trial.choices) ? trial.choices.flat(Infinity) : trial.choices;
 
     var this_isi = trial.isi.length > 1 ? jsPsych.randomization.shuffle(window.linspace(trial.isi[0], trial.isi[1], 0.1))[0] : trial.isi;
@@ -133,9 +132,7 @@ jsPsych.plugins.localiser = (function() {
     function show_cue() {
 
       html = '<div style="width:80vw; display:flex; flex-direction:row; justify-content:space-evenly;"><p class="localiser-cue">' + trial.words[0] + '</p><p class="localiser-cue">' + trial.words[1] + '</p></div>';
-      if (parameters.exp_variables.meg_mode) {
-        html += '<div id="photodiode" style="animation-duration: 0.1s;"></div>';
-      }
+      html += '<div id="photodiode" style="animation-duration: 0.1s;"></div>';
 
       display_element.innerHTML = html;
       triggers.push(["cue_onset",performance.now()]);
@@ -158,9 +155,14 @@ jsPsych.plugins.localiser = (function() {
       response.button = info.key;
 
       // display feedback
-      var correct_key_name = trial.words[0] == trial.stimuli ? trial.choices[0] : trial.choices[1];
+      var correct_key_name;
+      if (trial.words[0] == trial.stimuli) { // correct word was on the left
+        correct_key_name = trial.choices.slice(0,trial.choices.length/2);
+      } else {
+        correct_key_name = trial.choices.slice(trial.choices.length/2,trial.choices.length);
+      }
       var this_key = jsPsych.pluginAPI.convertKeyCodeToKeyCharacter(info.key);
-      var answer_correct = correct_key_name == this_key ? true : false;
+      var answer_correct = correct_key_name.some(x => this_key.indexOf(x) >= 0);
 
       response.acc = answer_correct;
 

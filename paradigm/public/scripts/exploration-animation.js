@@ -126,7 +126,6 @@ jsPsych.plugins["exploration-animation"] = (function() {
         '<p id="top-text" style="text-align:center; animation: fadeIn 0.3s ease-in 0s forwards;">That was the end of the path.<br><br>You go down a corridor that leads directly back to the <strong>CONTROL ROOM</strong></p>' +
         "</div>";
       button_names = ["Return >"];
-      trial.trial_duration[1] = trial.trial_duration[1] + 1;
     }
 
     if (

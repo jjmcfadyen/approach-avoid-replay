@@ -239,10 +239,10 @@ jsPsych.plugins["test-choice"] = (function() {
     // create prompt text
     var prompt = '';
     if (trial.is_practice == 1 && val_try_count > 0 && trial.trial_num == 0) {
-      prompt = 'Your memory hasn\'t quite recovered yet, so you try again to memorise how many oxygen cylinders you find in each room.<br><br>';
+      prompt = 'Your memory hasn\'t quite recovered yet, so you try again to memorise how many points you gain/lose in each room.<br><br>';
     }
     if (trial.choice == "free") {
-      prompt = 'Which door do you want to go through?';
+      prompt = '';
     } else {
       if (trial.is_practice == 1) {
         prompt += trial.choice < 2 ? 'You decide to go through ' + door_names[trial.choice] : 'You decide to go to the SUPPLY ROOM';
@@ -261,7 +261,7 @@ jsPsych.plugins["test-choice"] = (function() {
       var neg_html = '';
       var neg_flex = '';
       var neg_order = [0, 1]; //jsPsych.randomization.shuffle([[0,1],[1,0]])[0]; // randomise whether the door 1 or door 2 negs are shown left/right
-      if (trial.imgs_or_words == "images") {
+      if (trial.imgs_or_words == "images" & trial.choice != "free") {
         neg_html = '<img src="' + trial.stimuli_info.seq_array_filenames[neg_order[0]][trial.trial_negs[neg_order[0]]] + '" width="45%" style="padding:1%;">' +
           '<img src="' + trial.stimuli_info.seq_array_filenames[neg_order[1]][trial.trial_negs[neg_order[1]]] + '" width="45%" style="padding:1%;">';
         neg_flex = 'row';
@@ -380,7 +380,7 @@ jsPsych.plugins["test-choice"] = (function() {
 
       var little_points = '<p id="little-points" style="animation: fadeOut 0.3s ease-out ' + (trial.trial_duration + trial.response_window + 0.7) + 's forwards;">&nbsp</p>';
 
-      total_score = '<div id="oxygen-score"><p>Oxygen collected = </p><p id="big-points" style="color:' + score_colour + ';"><strong><big> ' + cumulative_acc + '</big></strong></p>' + little_points + '</div>';
+      total_score = '<div id="oxygen-score"><p>Points collected = </p><p id="big-points" style="color:' + score_colour + ';"><strong><big> ' + cumulative_acc + '</big></strong></p>' + little_points + '</div>';
     }
 
     // display stimulus

@@ -137,28 +137,6 @@ jsPsych.plugins["exploration-test"] = (function() {
         '</button>';
       }
 
-
-    // var blank_counter = -1;
-    // for (let i = 0; i < trial.stimuli_info.seq_array.length; i++) {
-    //   let which_state = jsPsych.randomization.shuffle([0, 1, 2])[0];
-    //   let state_name = trial.stimuli_info.seq_array[probe_idx[i]][which_state];
-    //   which_state = trial.stimuli_info.seq_array_filenames[probe_idx[i]][which_state];
-    //   let is_correct = probe_idx[i] == trial.test_seq[0] ? true : false;
-    //   if (is_correct) {
-    //     correct_btn1 = i;
-    //   }
-    //   blank_counter = blank_counter + 2;
-    //   probe_images += '<button class="state-btn" id="btn-blank-' + (blank_counter - 1) + '">' +
-    //     '<img src="' + which_state + '" alt="blank" style="opacity:0;">' +
-    //     '</button>' +
-    //     '<button class="state-btn" id="btn1-' + i + '" state-name="' + state_name + '" acc="' + is_correct + '">' +
-    //     '<img src="' + which_state + '" alt=""></button>' +
-    //     '<button class="state-btn" id="btn-blank-' + blank_counter + '">' +
-    //     '<img src="' + which_state + '" alt="blank" style="opacity:0;">' +
-    //     '</button>';
-    //   first_state_names.push(state_name);
-    // }
-
     var html = '<div id="exploration-test-container" class="instructions-background" style="animation: fadeIn 0.3s ease-in 0s forwards; overflow-y:hidden;">' +
       '<h1>Memory test</h1>' +
       '<p id="top-text-1">If you went through ' + prompt + ', which of the rooms below would it lead you to?</p>' +

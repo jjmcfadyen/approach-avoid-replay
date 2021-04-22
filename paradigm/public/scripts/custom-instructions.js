@@ -90,16 +90,23 @@ jsPsych.plugins["custom-instructions"] = (function() {
         array: true,
         default: '',
         description: 'Extra stimuli (array refers to page number) that is trial-dependent.'
+      },
+      meg_mode: {
+        type: jsPsych.plugins.parameterType.BOOLEAN,
+        pretty_name: 'MEG mode',
+        array: true,
+        default: false,
+        description: 'Whether this is the MEG block or the behavioural block.'
       }
     }
   };
 
   plugin.trial = function(display_element, trial) {
 
-    const parameters = loadParameters();
-    if (parameters.exp_variables.meg_mode){
-      trial.key_forward = parameters.key_responses.left_right_buttons[1];
-      trial.key_backward = parameters.key_responses.left_right_buttons[0];
+    const tmp_parameters = loadParameters();
+    if (trial.meg_mode){
+      trial.key_forward = tmp_parameters.key_responses.left_right_buttons[1];
+      trial.key_backward = tmp_parameters.key_responses.left_right_buttons[0];
     }
 
     // set up background
@@ -167,7 +174,7 @@ jsPsych.plugins["custom-instructions"] = (function() {
       if (trial.pages.length > 1 && trial.show_page_number) {
         nav_html += pagenum_display;
       }
-      if (parameters.exp_variables.meg_mode && current_page == trial.pages.length-1 && !trial.allow_meg)
+      if (trial.meg_mode && current_page == trial.pages.length-1 && !trial.allow_meg)
       {
         nav_html += "</div>";
         trial.key_forward = "enter";
@@ -185,14 +192,14 @@ jsPsych.plugins["custom-instructions"] = (function() {
         nav_html += "<button id='jspsych-instructions-next' class='instructions-btn'" +
           "style='margin-left: 5px;'>" + trial.button_label_next +
           " &gt;</button></div>";
-          if (parameters.exp_variables.meg_mode && !trial.allow_meg){
-            trial.key_forward = parameters.key_responses.left_right_buttons[1];
-            trial.key_backward = parameters.key_responses.left_right_buttons[0];
+          if (trial.meg_mode && !trial.allow_meg){
+            trial.key_forward = tmp_parameters.key_responses.left_right_buttons[1];
+            trial.key_backward = tmp_parameters.key_responses.left_right_buttons[0];
           }
       }
 
       var cwidth = '';
-      if (parameters.exp_variables.meg_mode){
+      if (trial.meg_mode){
         cwidth = 'style="width: 75vw; max-height:90vh;"';
       }
 
@@ -203,7 +210,7 @@ jsPsych.plugins["custom-instructions"] = (function() {
         display_element.querySelector('#jspsych-instructions-back').addEventListener('click', btnListener);
       }
 
-      if (!(parameters.exp_variables.meg_mode && current_page == trial.pages.length-1 && !trial.allow_meg))
+      if (!(trial.meg_mode && current_page == trial.pages.length-1 && !trial.allow_meg))
       {
         display_element.querySelector('#jspsych-instructions-next').addEventListener('click', btnListener);
       }

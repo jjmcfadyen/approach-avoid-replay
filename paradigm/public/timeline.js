@@ -71,7 +71,8 @@ window.loadTimeline = function(parameters, db, uid) {
       allow_backward: false,
       button_label_next: "Begin",
       fade_from_black: true,
-      background: background
+      background: background,
+      meg_mode: parameters.exp_variables.meg_mode
     };
     questionnaire_timeline.push(q_instructions);
 
@@ -154,7 +155,7 @@ window.loadTimeline = function(parameters, db, uid) {
         };
 
         db.collection("iterations")
-          .doc("pilot_v2.4")
+          .doc("pilot_v2.5")
           .collection("subjects")
           .doc(uid)
           .collection("questionnaires")
@@ -274,7 +275,7 @@ window.loadTimeline = function(parameters, db, uid) {
         };
 
         db.collection("iterations")
-          .doc("pilot_v2.4")
+          .doc("pilot_v2.5")
           .collection("subjects")
           .doc(uid)
           .collection("questionnaires")
@@ -477,7 +478,7 @@ window.loadTimeline = function(parameters, db, uid) {
         };
 
         db.collection("iterations")
-          .doc("pilot_v2.4")
+          .doc("pilot_v2.5")
           .collection("subjects")
           .doc(uid)
           .collection("questionnaires")
@@ -523,6 +524,7 @@ window.loadTimeline = function(parameters, db, uid) {
       ],
       allow_backward: false,
       button_label_next: "Begin",
+      meg_mode: true,
       fade_from_black: true,
       background: "black" // 'black' or 'stars'
     };
@@ -596,7 +598,7 @@ window.loadTimeline = function(parameters, db, uid) {
             };
 
             db.collection("iterations")
-              .doc("pilot_v2.4")
+              .doc("pilot_v2.5")
               .collection("subjects")
               .doc(uid)
               .collection("0_functional_localiser")
@@ -625,7 +627,7 @@ window.loadTimeline = function(parameters, db, uid) {
                 .mean();
               var mainDB = db
                 .collection("iterations")
-                .doc("pilot_v2.4")
+                .doc("pilot_v2.5")
                 .collection("subjects")
                 .doc(uid);
 
@@ -654,6 +656,7 @@ window.loadTimeline = function(parameters, db, uid) {
             ")</p><p>Please wait for the experimenter.</p>"
           ],
           allow_backward: false,
+          meg_mode: true,
           button_label_next: "Continue",
           fade_from_black: true,
           background: "black" // 'black' or 'stars'
@@ -665,6 +668,7 @@ window.loadTimeline = function(parameters, db, uid) {
             "<p style='text-align:center;'>End of final block</p><p>Please wait for the experimenter.</p>"
           ],
           allow_backward: false,
+          meg_mode: true,
           button_label_next: "Continue",
           fade_from_black: true,
           background: "black" // 'black' or 'stars'
@@ -694,9 +698,9 @@ window.loadTimeline = function(parameters, db, uid) {
       "<p>You are a passenger aboard a spaceship making the long journey to another planet. You and the other passengers have all been cryogenically frozen and set to wake up on the day of landing.</p><p>You have woken up earlier than you were supposed to. The doors of your cryogenic chamber open and you crawl out. You look around. The other passengers are all still asleep.</p><p>The spaceship's control panel is in the middle of the room. You walk up to it and inspect the screen. It shows that the date is 5th November, 2173. You have woken up several days before your scheduled arrival date.</p><p>You decide to explore the rooms of the spaceship to see what you can find.</p>",
 
       "<h1>The Awakening</h1>" +
-      "<p>In front of you is a large door. You walk up to it, haul it open, and walk through. The door slides shut behind you and locks. It seems that you have entered into a small airlocked room with <strong>2 DOORS</strong> that lead to other parts of the ship (see the map in the top-left corner of the screen).</p><p>You now have no choice but to explore the paths behind each door. You will memorise the order of the rooms you encounter by assigning a <strong>UNIQUE IMAGE</strong> to each room you visit.</p><p>Later, you will test your memory for the order of the different images behind each door.</p>",
+      "<p>In front of you is a large door. You walk up to it, haul it open, and walk through. The door slides shut behind you and locks.</p><p>It seems that you have entered into a small airlocked room with <strong>2 DOORS</strong> that lead to other parts of the ship.</p><p>You now have no choice but to explore the paths behind each door. You will memorise the order of the rooms along each path. Each room will be represented by an <strong>IMAGE</strong>.</p><p>Later, you will test your memory for the order of images along each path.</p>",
 
-      "<p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p><p style='text-align:center;'>(Note: You can either CLICK the buttons below using your mouse, or you can use the ARROW KEYS on your keyboard.)</p>"
+      "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the order of images behind DOOR 1 and DOOR 2.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p><p style='text-align:center;'>(Note: You can either CLICK the buttons below using your mouse, or you can use the ARROW KEYS on your keyboard.)</p>"
     ];
   }
 
@@ -706,6 +710,7 @@ window.loadTimeline = function(parameters, db, uid) {
     pages: instructions_pages,
     fade_from_black: true,
     background: background,
+    meg_mode: parameters.exp_variables.meg_mode,
     map: []
   };
 
@@ -743,7 +748,7 @@ window.loadTimeline = function(parameters, db, uid) {
           };
 
           db.collection("iterations")
-            .doc("pilot_v2.4")
+            .doc("pilot_v2.5")
             .collection("subjects")
             .doc(uid)
             .collection("1_exploration_data")
@@ -759,7 +764,7 @@ window.loadTimeline = function(parameters, db, uid) {
             });
         }
       };
-      exploration_timeline.push(exploration_choice);
+      //exploration_timeline.push(exploration_choice);
 
       for (let stim = 0; stim < 4; stim++) {
         var this_stim = stim < 3 ? trl_stimuli[stim] : null;
@@ -800,7 +805,7 @@ window.loadTimeline = function(parameters, db, uid) {
 
             if (stim < 3) {
               db.collection("iterations")
-                .doc("pilot_v2.4")
+                .doc("pilot_v2.5")
                 .collection("subjects")
                 .doc(uid)
                 .collection("1_exploration_data")
@@ -818,7 +823,7 @@ window.loadTimeline = function(parameters, db, uid) {
             }
           }
         };
-        exploration_timeline.push(exploration_animation);
+        //exploration_timeline.push(exploration_animation);
       }
     }
   }
@@ -834,9 +839,9 @@ window.loadTimeline = function(parameters, db, uid) {
     ],
     allow_backward: false,
     button_label_next: "Begin",
-    allow_meg: true,
     fade_from_black: true,
-    background: background
+    background: background,
+    meg_mode: parameters.exp_variables.meg_mode
   };
   exploration_timeline.push(memory_test_cue);
 
@@ -895,7 +900,7 @@ window.loadTimeline = function(parameters, db, uid) {
         };
 
         db.collection("iterations")
-          .doc("pilot_v2.4")
+          .doc("pilot_v2.5")
           .collection("subjects")
           .doc(uid)
           .collection("2_exploration_test")
@@ -922,7 +927,7 @@ window.loadTimeline = function(parameters, db, uid) {
             .values.slice(-1)[0];
           var mainDB = db
             .collection("iterations")
-            .doc("pilot_v2.4")
+            .doc("pilot_v2.5")
             .collection("subjects")
             .doc(uid);
 
@@ -967,8 +972,8 @@ window.loadTimeline = function(parameters, db, uid) {
     background: background,
     pages: ['<h1>Finished!</h1><p>Thank you for completing the experiment! Please inform the experimenter.</p>'],
     allow_keys: false,
-    allow_meg: false
-  }
+    meg_mode: parameters.exp_variables.meg_mode
+  };
 
   /* check if they failed the learning phase, and repeat if the performance was below threshold AND the try count is still low enough */
   var repeat_exploration = {
@@ -1037,18 +1042,18 @@ window.loadTimeline = function(parameters, db, uid) {
     value_learning_instructions_pages = [
       "<h1>Points</h1>" +
       "<p style='text-align:center;'>You must <strong>MEMORISE THE NUMBER OF OXYGEN POINTS</strong> that you <span style='color:rgb(0,255,0);'><strong>GAIN</strong></span> or <span style='color:rgb(255,20,20);'><strong>LOSE</strong></span> in each room.</p><p>Keep an eye on the number of oxygen points you are <strong>CURRENTLY CARRYING</strong> as you progress through each room. This reflects the 'cumulative sum' of points, which you will need to be able to recall easily later on. This will be shown at the bottom of the screen as your journey plays out.</p>",
-      "<p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
+      "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the number of points gained or lost in each room.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
     ];
   } else {
     value_learning_instructions_pages = [
       "<h1>Red Alert</h1>" +
       "<p>You are sitting in the <strong>CONTROL ROOM</strong> when suddenly the room flashes red and alarms start wailing.</p><p>You go to the control panel and read the message...</p>",
-      "<div id='warning-screen'><h2>WARNING</h2><p>ERROR #0624: INSUFFICIENT OXYGEN SUPPLY (2.52% remaining in CONTROL ROOM; 0.05% remaining in CONNECTING ROOMS)</p><p>Oxygen levels are dangerously low. Fit spacesuit and oxygen canister IMMEDIATELY. Ensure all passengers are IN CRYOGENIC FROZEN STATE.</p></div><p>On the control panel, the light next to <strong>SUPPLY ROOM</strong> is flashing. You remember that the supply room is located at the end of a long, winding corridor. You make your way there...</p>",
-      "<p>You move as fast as you can down the long corridor towards the <strong>SUPPLY ROOM</strong>, gasping for breath as the oxygen levels plummet.</p><p>Finally, you reach the room. Inside, the space suit is hanging on a hook on the wall. You desperately pull it off the hook and climb into the suit, zipping it up and fitting the helmet over your head.</p><p>Around you there are stacks of crates, full of odds and ends and - oxygen canisters!</p><p>You grab the canister nearest to you and fit it into the slot on the space suit. It clicks into place and a little light next to it turns green.</p>",
+      "<div id='warning-screen'><h2>WARNING</h2><p>ERROR #0624: INSUFFICIENT OXYGEN SUPPLY</p><p>Oxygen levels are dangerously low. Fit spacesuit and oxygen canister IMMEDIATELY. Ensure all passengers are CRYOGENICALLY FROZEN.</p></div><p>On the control panel, the light next to <strong>SUPPLY ROOM</strong> is flashing. You remember that the supply room is located at the end of a long, winding corridor. You make your way there...</p>",
+      "<p>You move as fast as you can down the long corridor towards the <strong>SUPPLY ROOM</strong>, gasping for breath as the oxygen levels plummet.</p><p>Finally, you reach the room. Inside, the space suit is hanging on a hook on the wall. You desperately pull it off the hook and climb into the suit, zipping it up and fitting the helmet over your head.</p><p>Around you there are stacks of crates, full of supplies and - oxygen canisters!</p><p>You grab the canister nearest to you and fit it into the slot on the space suit. It clicks into place and a little light next to it turns green.</p>",
       "<p>Warmth rushes over you as you breathe in the steady flow of oxygen. You check the indicator light on the oxygen pack.</p><p>It has already turned yellow.</p><p>You must get back to the control room as fast as you can, where the oxygen levels are more stable.</p>",
       "<p>You arrive back at the control room, just as that oxygen canister runs out and the light turns red.<p>You could go back to the <strong>SUPPLY ROOM</strong>... but the room is far away.</p><p>Instead, you decide to explore the paths behind the two doors in the airlocked room that you learnt earlier to collect more oxygen.</p>",
       "<p style='text-align:center;'>You must <strong>MEMORISE THE NUMBER OF OXYGEN POINTS</strong> that you <span style='color:rgb(0,255,0);'><strong>GAIN</strong></span> or <span style='color:rgb(255,20,20);'><strong>LOSE</strong></span> in each room.</p><p>Keep an eye on the number of oxygen points you are <strong>CURRENTLY CARRYING</strong> as you progress through each room. This reflects the 'cumulative sum' of points, which you will need to be able to recall easily later on. This will be shown at the bottom of the screen as your journey plays out.</p>",
-      "<p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
+      "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the number of points gained or lost in each room.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
     ];
   }
 
@@ -1058,7 +1063,7 @@ window.loadTimeline = function(parameters, db, uid) {
     pages: value_learning_instructions_pages,
     map: [],
     background: background,
-    allow_meg: true
+    meg_mode: parameters.exp_variables.meg_mode
   };
 
   // Parameters
@@ -1126,7 +1131,7 @@ window.loadTimeline = function(parameters, db, uid) {
         };
 
         db.collection("iterations")
-          .doc("pilot_v2.4")
+          .doc("pilot_v2.5")
           .collection("subjects")
           .doc(uid)
           .collection("3_value_learning")
@@ -1183,7 +1188,7 @@ window.loadTimeline = function(parameters, db, uid) {
             };
 
             db.collection("iterations")
-              .doc("pilot_v2.4")
+              .doc("pilot_v2.5")
               .collection("subjects")
               .doc(uid)
               .collection("3_value_learning")
@@ -1216,9 +1221,9 @@ window.loadTimeline = function(parameters, db, uid) {
     ],
     allow_backward: false,
     button_label_next: "Begin",
-    allow_meg: true,
     fade_from_black: true,
-    background: background
+    background: background,
+    meg_mode: parameters.exp_variables.meg_mode
   };
   value_learning_timeline.push(value_test_cue);
 
@@ -1274,7 +1279,7 @@ window.loadTimeline = function(parameters, db, uid) {
         };
 
         db.collection("iterations")
-          .doc("pilot_v2.4")
+          .doc("pilot_v2.5")
           .collection("subjects")
           .doc(uid)
           .collection("4_value_test")
@@ -1301,7 +1306,7 @@ window.loadTimeline = function(parameters, db, uid) {
             .values.slice(-1)[0];
           var mainDB = db
             .collection("iterations")
-            .doc("pilot_v2.4")
+            .doc("pilot_v2.5")
             .collection("subjects")
             .doc(uid);
 
@@ -1413,13 +1418,16 @@ window.loadTimeline = function(parameters, db, uid) {
     '<h3 style="text-align:center;">Warning indicators:</h3>' +
     '<h3 style="text-align:center;">Door reliability:</h3>' +
     '<div style="display:flex; justify-content:space-around; align-items:center; flex-direction:row; width:100%;">' +
-    '<div><p class="neg-cue">' +
-    seq_array[0][practice_struct.N[0][0]-1] + '</p></div>' +
-    '<div><p class="neg-cue">' +
-    seq_array[1][practice_struct.N[1][0]-1] + '</p></div>' +
-    '</div>' +
+    //'<div><p class="neg-cue">' +
+    //seq_array[0][practice_struct.N[0][0]-1] + '</p></div>' +
+    //'<div><p class="neg-cue">' +
+    //seq_array[1][practice_struct.N[1][0]-1] + '</p></div>' +
+    //'</div>' +
+    '<img src="' + seq_array_filenames[0][practice_struct.N[0][0]-1] + '" width="45%" style="padding:1%;">' +
+    '<img src="' + seq_array_filenames[1][practice_struct.N[1][0]-1] + '" width="45%" style="padding:1%;"></div>' +
     '<div style="height:45%; width:80%; display:flex; align-items:center; flex-direction:column; margin:auto; justify-content:space-evenly;">' +
-    '<div style="height:45%; width:80%; display:flex; align-items:centerHey; flex-direction:column; margin:auto; justify-content:space-evenly; "><div id="door-1-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 1: 50%</big></p><div id="door-1-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div><div id="door-2-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 2: 50%</big></p><div id="door-2-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div></div></div></div>';
+    '<div style="height:45%; width:80%; display:flex; align-items:centerHey; flex-direction:column; margin:auto; justify-content:space-evenly; "><div id="door-1-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 1: 50%</big></p><div id="door-1-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div><div id="door-2-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 2: 50%</big></p><div id="door-2-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div></div></div></div>' +
+    '<p>In this example, the <strong>"' + seq_array[0][practice_struct.N[0][0]-1] + '"</strong> room and the <strong>"' + seq_array[1][practice_struct.N[1][0]-1] + '"</strong> room can potentially reverse your points (but only if the total number of points you have in the room is an ODD number).</p><p>There is also a 50-50 chance that Door 1 or Door 2 will be open (see next page for more details).</p>';
 
   function oddeven_text(path) {
     var these_vals = practice_struct.V[0][path].slice(0);
@@ -1445,7 +1453,7 @@ window.loadTimeline = function(parameters, db, uid) {
       '</p><p style="width:33%; text-align:center;">' +
       these_vals[2] +
       "</p></div>" +
-      '<div id="cumulative-value-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Carrying: </p><p style="width:100%; text-align:center;"><strong>' +
+      '<div id="cumulative-value-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Gained/Lost: </p><p style="width:100%; text-align:center;"><strong>' +
       brackets0 +
       '</strong></p></div><p style="width:33%; text-align:center;">' +
       these_neg_vals[0] +
@@ -1476,10 +1484,10 @@ window.loadTimeline = function(parameters, db, uid) {
         if (odd_label == "ODD") {
           if (i == 0) {
             oddeven +=
-              '<p style="width:100%; text-align:center; color:rgb(255, 161, 0);"><strong>ODD: chemical reaction triggered!</strong></p></div>';
+              '<p style="width:100%; text-align:center; color:rgb(255, 161, 0);"><strong>ODD</strong>: total sum of points will be reversed!</p></div>';
           } else {
             oddeven +=
-              '<p style="width:33%; text-align:center; color:rgb(255, 161, 0);"><strong>ODD: chemical reaction triggered!</strong></p>';
+              '<p style="width:33%; text-align:center; color:rgb(255, 161, 0);"><strong>ODD</strong>: total sum of points will be reversed!</p>';
           }
         } else {
           if (i == 0) {
@@ -1519,10 +1527,10 @@ window.loadTimeline = function(parameters, db, uid) {
       these_neg_vals[2] < 0 ? "rgb(255,0,0)" : "rgb(0,255,0)";
 
     text +=
-      '<div id="result-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Reaction: </p>' +
+      '<div id="result-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Reversal: </p>' +
       oddeven +
       "</div>" +
-      '<div id="outcome-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;"><strong><big>Total outcome:</strong></big></p><p style="width:100%; text-align:center; color:rgb(255, 161, 0);">&nbsp</p></div><p style="width:33%; text-align:center;">&nbsp</p><p style="width:33%; text-align:center;"><span style="color:' +
+      '<div id="outcome-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;"><strong><big>Final outcome:</strong></big></p><p style="width:100%; text-align:center; color:rgb(255, 161, 0);">&nbsp</p></div><p style="width:33%; text-align:center;">&nbsp</p><p style="width:33%; text-align:center;"><span style="color:' +
       outcome_colour +
       ';"><strong><big>' +
       these_neg_vals[2] +
@@ -1553,14 +1561,14 @@ window.loadTimeline = function(parameters, db, uid) {
       "</div>" +
       imagestext2[1],
 
-      '<div><p style="align-text:center;"><strong>You can earn a <span style="color:rgb(0,255,0);">BONUS of up to £10</span> if you complete the experiment! The more oxygen points you earn each time, the higher your bonus will be.</strong><p>' +
+      '<div><p style="align-text:center;"><strong>You can earn a <span style="color:rgb(0,255,0);">BONUS of up to £10</span> if you make the best possible choices.</strong></p><p>To do this, you will have to calculate the total points for Door 1 and Door 2, and then decide whether you should risk going through the airlock, or instead go to the supply room.<p>' +
       '<p style="text-align:center;">&nbsp</p><p style="text-align:center;">Please wait for the experimenter to begin the program.</p><p style="text-align:center;"><strong>Remember to stay very still during scanning.</strong></p></div>'
     ].flat(1);
   } else {
     negator_learning_instructions_pages = [
       "<h1>Survival</h1>" +
       "<p>Here is a recap of what you have learnt so far.</p>" +
-      "<h2>Aim</h2><p>Your aim is to collect as many oxygen points (i.e. points) as possible so that you can maximise your chances of survival when the ship finally reaches its destination.</p><p>You will receive <strong><span style='color:rgb(0,255,0);'>real bonus money</span></strong> based on how well you maximise your points!</p>" +
+      "<h2>Aim</h2><p>Your aim is to collect as many oxygen points as possible so that you can maximise your chances of survival when the ship finally reaches its destination.</p><p>You will receive <strong><span style='color:rgb(0,255,0);'>real bonus money</span></strong> based on how well you maximise your points!</p>" +
       "<h2>Choices</h2><p>You have learnt that there are two paths - Door 1 and Door 2 (which are accessed via the AIRLOCK) - and the SUPPLY ROOM. Each day, you can choose to go to either the:</p>" +
       '<ul style="text-align:left;">' +
       "<li><strong>Airlock</strong> (where you can access Door 1 or Door 2)</li>" +
@@ -1568,14 +1576,15 @@ window.loadTimeline = function(parameters, db, uid) {
       "</ul>",
 
       "<h1>New Rules</h1><h2>Door Probabilities</h2>" +
-      '<p>Should you choose to go through the AIRLOCK, you will be sent to either Door 1 or Door 2 according to a certain probability:' +
-      '<ul style="padding-left:25px;"><li>Before making your choice, you will be shown the <strong>PROBABILITY</strong> of whether you will go through Door 1 <i>or</i> Door 2 will be open, should you choose to enter the <strong>AIRLOCK</strong></li>' +
-      "<li>Only ONE of the doors will ever be open. You will not know the outcome until after making your choice.</li>" +
-      "<li>The door to the supply room will always have a 100% probability of being open, and you will always retrieve 1 oxygen point.</li></ul>" +
+      '<p>If you choose to go through the airlock...' +
+      '<ul style="padding-left:25px;"><li>Only <strong>ONE</strong> of the doors will ever be open at a time.</li>' +
+      "<li>You will not know WHICH door is open until you get to the airlock.</li>" +
+      "<li>To help you decide, you will be told the <strong>PROBABILITY</strong> that Door 1 vs Door 2 will be open (e.g., 90% chance Door 1, 10% chance Door 2)</li>" +
+      "<li>The door to the supply room will <i>always</i> be open, and you will <i>always</i> retrieve 1 oxygen point.</li></ul>" +
       "</ul></p>",
 
       "<h1>New Rules</h1><h2>Hazardous Rooms</h2>" +
-      '<p>Each day, you will receive a warning that some of the rooms can <strong>REVERSE</strong> your points as you progress down a path:</p>' +
+      '<p>Each day, you will receive a warning that some of the rooms can <strong>REVERSE</strong> your points:</p>' +
       '<ul style="text-align:left;">' +
       '<li>There will always be TWO "hazardous" rooms; one behind Door 1 and one behind Door 2.</li>' +
       "<li>If you <strong>LEAVE</strong> one of these rooms while carrying an <strong>ODD</strong> number of oxygen points, the points will <strong>REVERSE</strong>. This means that if they were positive then they will become <strong><span style='color:rgb(255,0,0);'>NEGATIVE</span></strong>, and if they were negative then they will become <strong><span style='color:rgb(0,255,0);'>POSITIVE</span></strong>.</li>" +
@@ -1596,17 +1605,22 @@ window.loadTimeline = function(parameters, db, uid) {
       "</div>" +
       imagestext2[1],
 
-      '<div><p><strong>You can earn a <span style="color:rgb(0,255,0);">BONUS of up to £5</span> if you complete the experiment! The more oxygen points you earn each time, the higher your bonus will be.</strong><p>' +
-      '<p><strong>Note that the supply room will be CLOSED for the first few trials</strong>, so you will have to go through the AIRLOCK. After the supply room opens, you will be able to choose between the airlock and the supply room.</p>' +
-      '<p>Before we do the main experiment, we will let you do a practice so that you are as familiar as possible with the game.</p>' +
-      '<p style="text-align:center;"><strong>Ready for a practice?</strong></p><p style="text-align:center;">Press "Next" to begin</p><p style="text-align:center;"><small>(or press "Previous" to look back at the instructions)</small></p></div>'
+      '<div><p><strong>You can earn a <span style="color:rgb(0,255,0);">BONUS of up to £5</span> if you make the best possible choices!</strong></p><p>To do this, you will have to calculate the total points for Door 1 and Door 2, and then decide whether you should risk going through the airlock, or instead go to the supply room.<p>' +
+      '<p>Notes:</p>' +
+      '<ul style="text-align:left;">' +
+      '<li><strong>The supply room will be CLOSED for the first few trials</strong>, so you will have to go through the AIRLOCK. These are called <span style="color:rgb(154, 72, 241)"><strong>forced choice</strong></span> trials. After the supply room OPENS, you will be able to choose between the airlock and the supply room.</li>' +
+      '<li>We want you to <i>mentally imagine</i> the pictures for each room as much as possible. To encourage this, we will only SHOW you the images on the first few trials (i.e., the <span style="color:rgb(154, 72, 241)"><strong>forced choice</strong></span> trials). The rest of the time, the images will be replaced by "?" symbols.</li></ul>' +
+      '<p>Before we do the main experiment, we will let you do a practice so that you are as familiar as possible with the game.</p>',
+
+      '<p style="text-align:center;"><strong>Ready for a practice?</strong></p><p style="text-align:center;">Press "Next" to begin</p><p style="text-align:center;"><small>(or press "Previous" to look back at the instructions)</small></p>'
     ].flat(1);
   }
 
 
   var negator_learning_instructions = {
     type: "custom-instructions",
-    pages: negator_learning_instructions_pages
+    pages: negator_learning_instructions_pages,
+    meg_mode: parameters.exp_variables.meg_mode
   };
 
   // Trials
@@ -1659,7 +1673,7 @@ window.loadTimeline = function(parameters, db, uid) {
       transition: practice_struct.Forced[trl]-1,
       is_practice: 2,
       block_num: 0,
-      imgs_or_words: "words",
+      imgs_or_words: "images",
       end_pause: 500,
       background: background,
       trial_duration: null, // in seconds - this is the PLANNING WINDOW
@@ -1717,7 +1731,7 @@ window.loadTimeline = function(parameters, db, uid) {
         }
 
         db.collection("iterations")
-          .doc("pilot_v2.4")
+          .doc("pilot_v2.5")
           .collection("subjects")
           .doc(uid)
           .collection("5_negator_learning")
@@ -1789,7 +1803,7 @@ window.loadTimeline = function(parameters, db, uid) {
               }
 
               db.collection("iterations")
-                .doc("pilot_v2.4")
+                .doc("pilot_v2.5")
                 .collection("subjects")
                 .doc(uid)
                 .collection("5_negator_learning")
@@ -1833,7 +1847,7 @@ window.loadTimeline = function(parameters, db, uid) {
 
             var mainDB = db
               .collection("iterations")
-              .doc("pilot_v2.4")
+              .doc("pilot_v2.5")
               .collection("subjects")
               .doc(uid);
             var update_mainDB = mainDB.set({
@@ -1861,7 +1875,8 @@ window.loadTimeline = function(parameters, db, uid) {
         type: "custom-instructions",
         pages: ['<p style="text-align:center;">The supply room is now open, so we will now hide the images when you visit each room. Instead, a "?" will be displayed. Try to remember and imagine the images.</p>'],
         background: background,
-        key_forward: parameters.key_responses.left_right_buttons[1]
+        key_forward: parameters.key_responses.left_right_buttons[1],
+        meg_mode: parameters.exp_variables.meg_mode
       };
       negator_learning_timeline.push(main_instructions_checkpoint);
     }
@@ -1895,11 +1910,6 @@ window.loadTimeline = function(parameters, db, uid) {
   // MAIN TEST //
   ///////////////
 
-  var hidden_img_instructions = '';
-  // if (parameters.exp_variables.meg_mode == true) {
-  hidden_img_instructions = "<li>When the supply room is <strong>OPEN</strong>, you will <strong>NOT</strong> be shown the images that you visit. This is so that we can test your memory.</li>";
-  // }
-
   var bonus_money = '';
   if (parameters.exp_variables.meg_mode){
     bonus_money = '10';
@@ -1917,29 +1927,24 @@ window.loadTimeline = function(parameters, db, uid) {
 } else {
   main_instructions_pages = [
   "<h1>Survival</h1>" +
-  "<p>You are now ready to complete the experiment. Here is a recap of what you have learnt:</p>" +
-  "<p>You will make 24 journeys per day. You are scheduled to land in 6 days.</p>",
-
-  "<h1>Survival</h1>" +
+  "<p>You are now ready to start the main experiment.</p>" +
   "<p><strong>Remember: you can earn a <span style='color:rgb(0,255,0);'>BONUS of up to £" + bonus_money + "</span> if you complete the experiment! The more oxygen points you earn each time, the higher your bonus will be.</strong><p>" +
   '<p>Please take note of some <strong><span style="color:rgb(255,10,10);">important changes</span></strong> for the main experiment:</p>' +
   "<ul style='line-height:2rem;'><li>You will only have <strong>" +
   parameters.timing.choice_dur +
   " SECONDS</strong> to PLAN which choice to make each time. A timer will be shown. If the timer runs out, you will LOSE 1 oxygen point.</li>" +
-  "<li>The <strong>NUMBER OF OXYGEN POINTS</strong> you pick up in each room will gradually <strong>CHANGE</strong> across the experiment. Keep track of this</li>" +
-  "<li>The Supply Room will be <strong>CLOSED</strong> for several turns at the beginning of each day. If the supply room is closed, the points you win or lose will <strong>NOT</strong> count towards your final score.</li>" +
-  hidden_img_instructions +
-  "<li>The number of oxygen points you find in each room will <strong>change</strong> at the start of every new block. Keep an eye out for this, as it will be critical to planning effectively.</li>" +
+  "<li>The <strong>NUMBER OF OXYGEN POINTS</strong> you pick up in each room will gradually <strong>CHANGE</strong> across the experiment. Keep track of this.</li>" +
   "</ul>",
 
-  '<p style="text-align:center"><strong>Ready?</strong></p><p style="text-align:center">Press "Next" to begin</p><p style="text-align:center"><small>(or press "Previous" to look back at the instructions)</small></p>'
+  "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Calculate the total sum of points for Door 1 and Door 2, according to which rooms are HAZARDOUS. Then, depending on whether Door 1 or Door 2 is more likely to be open, decide if it's worth the risk to go to the airlock or to get 1 point from the supply room.</p><p style='text-align:center'><strong>Ready?</strong></p><p style='text-align:center'>Press 'Next' to begin</p><p style='text-align:center'><small>(or press 'Previous' to look back at the instructions)</small></p>"
 ];
 }
 
   var main_instructions = {
     type: "custom-instructions",
     pages: main_instructions_pages,
-    background: background
+    background: background,
+    meg_mode: parameters.exp_variables.meg_mode
   };
 
   var nblocks = exp_structure.Block[exp_structure.Block.length - 1];
@@ -2064,7 +2069,7 @@ window.loadTimeline = function(parameters, db, uid) {
           }
 
           db.collection("iterations")
-            .doc("pilot_v2.4")
+            .doc("pilot_v2.5")
             .collection("subjects")
             .doc(uid)
             .collection("6_test")
@@ -2131,7 +2136,7 @@ window.loadTimeline = function(parameters, db, uid) {
                 }
 
                 db.collection("iterations")
-                  .doc("pilot_v2.4")
+                  .doc("pilot_v2.5")
                   .collection("subjects")
                   .doc(uid)
                   .collection("6_test")
@@ -2184,7 +2189,7 @@ window.loadTimeline = function(parameters, db, uid) {
 
               var mainDB = db
                 .collection("iterations")
-                .doc("pilot_v2.4")
+                .doc("pilot_v2.5")
                 .collection("subjects")
                 .doc(uid);
               var update_mainDB = mainDB.set(obj, {
@@ -2205,6 +2210,7 @@ window.loadTimeline = function(parameters, db, uid) {
     if (block < nblocks) {
       var end_block = {
         type: "custom-instructions",
+        meg_mode: parameters.exp_variables.meg_mode,
         on_start: function(trial) {
           var last_choice = jsPsych.data.get().filter({
             trial_type: 'test-choice'
@@ -2217,7 +2223,7 @@ window.loadTimeline = function(parameters, db, uid) {
 
           var mainDB = db
             .collection("iterations")
-            .doc("pilot_v2.4")
+            .doc("pilot_v2.5")
             .collection("subjects")
             .doc(uid);
 
