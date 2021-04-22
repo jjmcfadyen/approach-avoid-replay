@@ -84,6 +84,13 @@ jsPsych.plugins["test-animation"] = (function() {
         pretty_name: "Last trial",
         default: false,
         description: "Whether this is the last trial of the block or not."
+      },
+      meg_mode: {
+        type: jsPsych.plugins.parameterType.BOOLEAN,
+        pretty_name: 'MEG mode',
+        array: true,
+        default: false,
+        description: 'Whether this is the MEG block or the behavioural block.'
       }
     }
   };
@@ -92,9 +99,9 @@ jsPsych.plugins["test-animation"] = (function() {
 
     var door_names = ["DOOR 1", "DOOR 2", "SUPPLY ROOM"];
 
-    const parameters = loadParameters();
+    const tmp_parameters = trial.meg_mode ? loadParameters("meg","") : loadParameters("behav","");
 
-    if (parameters.exp_variables.meg_mode) {
+    if (trial.meg_mode) {
       document.getElementsByClassName("stars")[0].style.opacity = "0";
       document.getElementsByClassName("twinkling")[0].style.opacity = "0";
     } else {
@@ -102,7 +109,7 @@ jsPsych.plugins["test-animation"] = (function() {
       document.getElementsByClassName("twinkling")[0].style.opacity = "1";
     }
 
-    var safe_val = jsPsych.randomization.shuffle(parameters.values.safe_val)[0];
+    var safe_val = jsPsych.randomization.shuffle(tmp_parameters.values.safe_val)[0];
 
     var save_response = true;
 
@@ -146,7 +153,7 @@ jsPsych.plugins["test-animation"] = (function() {
       trial.choice = door_names.indexOf(trial.choice);
       previous_free = data.select('choice_type').values.slice(-1)[0] == "free" ? true : false;
 
-      if (previous_free) { // parameters.exp_variables.meg_mode == true
+      if (previous_free) { // trial.meg_mode == true
         show_images = false;
       }
 
@@ -426,7 +433,7 @@ jsPsych.plugins["test-animation"] = (function() {
         dhtml = '<div id="choice-container">' + html + score_html + button_html + '</div></div>' + total_score;
       }
 
-      if (parameters.exp_variables.meg_mode) {
+      if (trial.meg_mode) {
         dhtml += '<div id="photodiode" style="animation-duration: 0.5s;"></div>';
       }
 
@@ -498,10 +505,11 @@ jsPsych.plugins["test-animation"] = (function() {
 
       if (trial.trial_end_type == "time-or-response" || trial.trial_end_type == "time-out") {
         var endtime = null;
+        var this_isi = trial.isi.length==undefined ? trial.isi : trial.isi[0];
         if (negate_state){
-          endtime = (trial.trial_duration[1] + trial.isi) * 1000;
+          endtime = (trial.trial_duration[1] + this_isi) * 1000;
         } else {
-          endtime = (trial.trial_duration[0] + trial.isi) * 1000;
+          endtime = (trial.trial_duration[0] + this_isi) * 1000;
         }
         jsPsych.pluginAPI.setTimeout(function() {
           end_trial();
@@ -547,7 +555,7 @@ jsPsych.plugins["test-animation"] = (function() {
         response.outcome = trial.choice == 2 ? 1 : cumsum_array.pop();
       }
 
-      if (parameters.exp_variables.meg_mode) {
+      if (trial.meg_mode) {
         response.triggers = triggers.flat(Infinity);
       }
 

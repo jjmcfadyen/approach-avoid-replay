@@ -128,13 +128,20 @@ jsPsych.plugins["test-choice"] = (function() {
         pretty_name: 'Stimuli information',
         default: null,
         description: 'Object with image file names for each state in each path.'
+      },
+      meg_mode: {
+        type: jsPsych.plugins.parameterType.BOOLEAN,
+        pretty_name: 'MEG mode',
+        array: true,
+        default: false,
+        description: 'Whether this is the MEG block or the behavioural block.'
       }
     }
   };
 
   plugin.trial = function(display_element, trial) {
 
-    const parameters = loadParameters();
+    const tmp_parameters = trial.meg_mode ? loadParameters("meg","") : loadParameters("behav","");
     var door_names = ['DOOR 1', 'DOOR 2', 'SUPPLY ROOM'];
     var test_trial = trial.is_practice == 0 || trial.is_practice == 2 ? true : false;
 
@@ -147,7 +154,7 @@ jsPsych.plugins["test-choice"] = (function() {
     console.log("Trial ", trial.trial_num);
     console.log("EV: ", trial.expected_value);
 
-    if (parameters.exp_variables.meg_mode) {
+    if (trial.background=="black" | trial.meg_mode==true) {
       document.getElementsByClassName("stars")[0].style.opacity = "0";
       document.getElementsByClassName("twinkling")[0].style.opacity = "0";
     } else {
@@ -364,7 +371,7 @@ jsPsych.plugins["test-choice"] = (function() {
           block: trial.block_num
         }).json());
         if (tmp.length == 0) { // missed response
-          acc_array.push(-parameters.values.miss_penalty);
+          acc_array.push(-tmp_parameters.values.miss_penalty);
         } else {
           acc_array.push(tmp[tmp.length - 1].outcome);
         }
@@ -385,7 +392,7 @@ jsPsych.plugins["test-choice"] = (function() {
 
     // display stimulus
     var dhtml = '<div id="choice-container" style="animation: fadeIn 0.3s ease-in 0s forwards">' + html + button_html + '</div>' + total_score;
-    if (parameters.exp_variables.meg_mode) {
+    if (trial.meg_mode) {
       dhtml += '<div id="photodiode"  style="animation-duration: 0.1s;"></div>';
     }
     display_element.innerHTML = dhtml;
@@ -404,6 +411,7 @@ jsPsych.plugins["test-choice"] = (function() {
       key_choices = trial.choices.slice(0);
     }
     if (trial.choices != null) {
+      var response_delay = trial.is_practice ? 0 : 5000;
       jsPsych.pluginAPI.setTimeout(function() {
         var keyboardListener = jsPsych.pluginAPI.getKeyboardResponse({
           callback_function: key_response,
@@ -411,7 +419,7 @@ jsPsych.plugins["test-choice"] = (function() {
           rt_method: 'performance',
           persist: false,
           allow_held_key: false
-        })}, 5000);
+        });}, response_delay);
     }
 
     function btnListener(e) {
@@ -573,7 +581,7 @@ jsPsych.plugins["test-choice"] = (function() {
       document.getElementById("choice-container").style.animation = "fadeOut 0.3s ease-out 0s forwards";
       jsPsych.pluginAPI.setTimeout(function() {
         end_trial();
-      }, 1000);
+      }, 300);
     }
 
     // function to handle responses if there is a probabilistic transition
@@ -587,7 +595,7 @@ jsPsych.plugins["test-choice"] = (function() {
       document.getElementById("choice-container").style.animation = "fadeOut 0.3s ease-out 0s forwards";
       jsPsych.pluginAPI.setTimeout(function() {
         reveal_transition();
-      }, 500);
+      }, 300);
     }
 
     function reveal_transition() {
@@ -600,7 +608,7 @@ jsPsych.plugins["test-choice"] = (function() {
       reveal_html += '<p style="text-align:center;">You go through the airlock.</p>' +
         '<p style="text-align:center;"><big><strong>' + door_names[trial.transition] + '</strong> is open.</big></p>' +
         '</div>' + total_score;
-      reveal_html += parameters.exp_variables.meg_mode ? '<div id="photodiode"  style="animation-duration: 0.3s;"></div>' : '';
+      reveal_html += trial.meg_mode ? '<div id="photodiode"  style="animation-duration: 0.3s;"></div>' : '';
       display_element.innerHTML = reveal_html;
       triggers.push(["doorReveal_onset", performance.now()]);
       jsPsych.pluginAPI.setTimeout(function() {
@@ -611,7 +619,7 @@ jsPsych.plugins["test-choice"] = (function() {
     // function to end trial when it is time
     function end_trial() {
 
-      if (parameters.exp_variables.meg_mode) {
+      if (trial.meg_mode) {
         response.triggers = triggers.flat(Infinity);
       }
 

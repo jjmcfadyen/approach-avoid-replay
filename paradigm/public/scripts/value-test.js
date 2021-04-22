@@ -59,6 +59,13 @@ jsPsych.plugins["value-test"] = (function() {
         pretty_name: 'Choices',
         default: null,
         description: 'The keys the subject is allowed to press to respond to the stimulus.'
+      },
+      meg_mode: {
+        type: jsPsych.plugins.parameterType.BOOLEAN,
+        pretty_name: 'MEG mode',
+        array: true,
+        default: false,
+        description: 'Whether this is the MEG block or the behavioural block.'
       }
     }
   };
@@ -73,7 +80,7 @@ jsPsych.plugins["value-test"] = (function() {
     document.getElementsByClassName("stars")[0].style.opacity = "1";
     document.getElementsByClassName("twinkling")[0].style.opacity = "1";
 
-    const parameters = loadParameters();
+    const tmp_parameters = trial.meg_mode ? loadParameters("meg","") : loadParameters("behav","");
 
     var door_names = ['DOOR 1', 'DOOR 2', 'SUPPLY ROOM'];
 
@@ -145,7 +152,7 @@ jsPsych.plugins["value-test"] = (function() {
     }
 
     var text_header = '';
-    if (parameters.exp_variables.meg_mode == false){
+    if (trial.meg_mode == false){
       text_header = '<h1>Memory test</h1>';
     }
 
@@ -371,7 +378,7 @@ jsPsych.plugins["value-test"] = (function() {
 
       var small_buttons1 = '';
       var small_buttons2 = '';
-      if (parameters.exp_variables.meg_mode == true){
+      if (trial.meg_mode == true){
         small_buttons1 = 'font-size:1.5rem;';
         small_buttons2 = 'style="font-size:1.5rem;"';
       }
@@ -387,12 +394,12 @@ jsPsych.plugins["value-test"] = (function() {
       btn_html += '</div>';
 
       var next_button = 'Next';
-      if (parameters.exp_variables.meg_mode){
+      if (trial.meg_mode){
         next_button = '<span style="text-transform:lowercase;"><small> v </small></span> Next <span style="text-transform:lowercase;"><small> v </small></span>';
       }
 
       var small_image = '';
-      if (parameters.exp_variables.meg_mode == true){
+      if (trial.meg_mode == true){
         small_image = 'style="height:150px; min-height:150px;"';
       }
 
@@ -409,23 +416,13 @@ jsPsych.plugins["value-test"] = (function() {
         '<div id="memory-score"><p>Memory performance = ' + cumulative_acc + '</p></div>';
 
         if (trial.choices != null) {
-          if (parameters.exp_variables.meg_mode){
-            var keyboardListener = jsPsych.pluginAPI.getKeyboardResponse({
+          var keyboardListener = jsPsych.pluginAPI.getKeyboardResponse({
               callback_function: endTrial,
-              valid_responses: parameters.key_responses.up_down_buttons[1],
+              valid_responses: trial.choices.flat(Infinity),
               rt_method: 'performance',
               persist: false,
               allow_held_key: false
             });
-          } else {
-            var keyboardListener = jsPsych.pluginAPI.getKeyboardResponse({
-              callback_function: endTrial,
-              valid_responses: trial.choices[2].flat(Infinity),
-              rt_method: 'performance',
-              persist: false,
-              allow_held_key: false
-            });
-          }
         }
 
       document.getElementById('next-button').addEventListener('click', function(e) {

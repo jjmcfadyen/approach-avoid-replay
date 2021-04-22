@@ -724,7 +724,6 @@ window.loadTimeline = function(parameters, db, uid) {
       var exploration_choice = {
         type: "exploration-choice",
         choice: choice_list[trl],
-        end_pause: 500,
         trial_num: trl_counter,
         choices: parameters.key_responses.left_right_buttons[choice_list[trl]], // either LEFT or RIGHT, depending on whether Door 1 or Door 2 is selected for this forced-choice trial
         background: background,
@@ -764,7 +763,7 @@ window.loadTimeline = function(parameters, db, uid) {
             });
         }
       };
-      //exploration_timeline.push(exploration_choice);
+      exploration_timeline.push(exploration_choice);
 
       for (let stim = 0; stim < 4; stim++) {
         var this_stim = stim < 3 ? trl_stimuli[stim] : null;
@@ -823,7 +822,7 @@ window.loadTimeline = function(parameters, db, uid) {
             }
           }
         };
-        //exploration_timeline.push(exploration_animation);
+        exploration_timeline.push(exploration_animation);
       }
     }
   }
@@ -915,8 +914,7 @@ window.loadTimeline = function(parameters, db, uid) {
           });
 
         // save overall test accuracy to subject's main document
-        var tmp_params = loadParameters();
-        if (trial_data.trial == tmp_params.trial_numbers.memory_test_reps * 2) {
+        if (trial_data.trial == parameters.trial_numbers.memory_test_reps * 2) {
           var exploration_test_acc = jsPsych.data
             .get()
             .filter({
@@ -1041,7 +1039,7 @@ window.loadTimeline = function(parameters, db, uid) {
   if (parameters.exp_variables.meg_mode) {
     value_learning_instructions_pages = [
       "<h1>Points</h1>" +
-      "<p style='text-align:center;'>You must <strong>MEMORISE THE NUMBER OF OXYGEN POINTS</strong> that you <span style='color:rgb(0,255,0);'><strong>GAIN</strong></span> or <span style='color:rgb(255,20,20);'><strong>LOSE</strong></span> in each room.</p><p>Keep an eye on the number of oxygen points you are <strong>CURRENTLY CARRYING</strong> as you progress through each room. This reflects the 'cumulative sum' of points, which you will need to be able to recall easily later on. This will be shown at the bottom of the screen as your journey plays out.</p>",
+      "<p style='text-align:center;'>You must <strong>MEMORISE THE NUMBER OF POINTS</strong> that you <span style='color:rgb(0,255,0);'><strong>GAIN</strong></span> or <span style='color:rgb(255,20,20);'><strong>LOSE</strong></span> in each room.</p><p>Keep an eye on the <strong>TOTAL SUM</strong> of points you have as you progress through each room. This reflects the 'cumulative sum' of points, which you will need to be able to recall easily later on. This will be shown at the bottom of the screen as your journey plays out.</p>",
       "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the number of points gained or lost in each room.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
     ];
   } else {
@@ -1101,8 +1099,8 @@ window.loadTimeline = function(parameters, db, uid) {
     var value_learning_choice = {
       type: "test-choice",
       choice: value_learning_list[trl],
+      meg_mode: parameters.exp_variables.meg_mode,
       is_practice: 1,
-      end_pause: 500,
       trial_num: trl,
       show_score: false, // whether or not to show oxygen score for block in top-right corner
       background: background,
@@ -1155,6 +1153,7 @@ window.loadTimeline = function(parameters, db, uid) {
         stimuli: seq_array[value_learning_list[trl]],
         stimuli_info: image_info,
         background: background,
+        meg_mode: parameters.exp_variables.meg_mode,
         is_practice: 1,
         this_val: state_vals,
         stim_num: stim,
@@ -1240,6 +1239,7 @@ window.loadTimeline = function(parameters, db, uid) {
       this_val: state_vals,
       this_seq: val_test_seq[seq],
       stimuli_info: image_info,
+      meg_mode: parameters.exp_variables.meg_mode,
       choices: [
         parameters.key_responses.left_right_buttons[0],
         parameters.key_responses.up_down_buttons[0],
@@ -1294,8 +1294,7 @@ window.loadTimeline = function(parameters, db, uid) {
           });
 
         // save overall test accuracy to subject's main document
-        var tmp_params = loadParameters();
-        if (trial_data.trial == tmp_params.trial_numbers.value_test_reps * 2) {
+        if (trial_data.trial == parameters.trial_numbers.value_test_reps * 2) {
           var value_test_acc = jsPsych.data
             .get()
             .filter({
@@ -1674,7 +1673,6 @@ window.loadTimeline = function(parameters, db, uid) {
       is_practice: 2,
       block_num: 0,
       imgs_or_words: "images",
-      end_pause: 500,
       background: background,
       trial_duration: null, // in seconds - this is the PLANNING WINDOW
       response_window: parameters.timing.resp_window, // in seconds - this is the RESPONSE WINDOW
@@ -1716,9 +1714,9 @@ window.loadTimeline = function(parameters, db, uid) {
           trial_data.value = -parameters.values.miss_penalty;
         }
 
-        if (parameters.exp_variables.meg_mode) {
-          trial_data.triggers = filtered_data.triggers;
-        }
+        // if (parameters.exp_variables.meg_mode) {
+        //   trial_data.triggers = filtered_data.triggers;
+        // }
 
         // figure out if this was the best choice or not
         if (trial_data.rt == null) {
@@ -1753,6 +1751,7 @@ window.loadTimeline = function(parameters, db, uid) {
       var practice_animation = {
         type: "test-animation",
         choice: practice_struct.Forced[trl],
+        meg_mode: parameters.exp_variables.meg_mode,
         stimuli_info: image_info,
         is_practice: 2,
         block_num: 0,
@@ -2008,6 +2007,7 @@ window.loadTimeline = function(parameters, db, uid) {
         background: background,
         choice: choiceType,
         imgs_or_words: "words",
+        meg_mode: parameters.exp_variables.meg_mode,
         expected_value: test_structure.EV[trl],
         transition: test_structure.Forced[trl]-1,
         show_score: false,
@@ -2015,7 +2015,6 @@ window.loadTimeline = function(parameters, db, uid) {
         trial_negs: this_trl_negs,
         is_practice: 0,
         stimuli_info: image_info,
-        end_pause: 500,
         trial_duration: parameters.timing.choice_dur, // in seconds - this is the PLANNING WINDOW
         response_window: parameters.timing.resp_window, // in seconds - this is the RESPONSE WINDOW
         feedback_duration: parameters.timing.feedback_window, // in seconds - this is the 'TOO SLOW' response
@@ -2092,6 +2091,7 @@ window.loadTimeline = function(parameters, db, uid) {
           type: "test-animation",
           background: background,
           choice: test_structure.Forced[trl],
+          meg_mode: parameters.exp_variables.meg_mode,
           is_practice: 0,
           stimuli_info: image_info,
           stim_num: stim,

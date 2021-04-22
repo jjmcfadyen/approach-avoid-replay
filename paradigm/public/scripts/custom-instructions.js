@@ -103,7 +103,7 @@ jsPsych.plugins["custom-instructions"] = (function() {
 
   plugin.trial = function(display_element, trial) {
 
-    const tmp_parameters = loadParameters();
+    const tmp_parameters = trial.meg_mode ? loadParameters("meg","") : loadParameters("behav","");
     if (trial.meg_mode){
       trial.key_forward = tmp_parameters.key_responses.left_right_buttons[1];
       trial.key_backward = tmp_parameters.key_responses.left_right_buttons[0];

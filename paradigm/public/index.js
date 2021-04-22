@@ -159,16 +159,7 @@ window.startExp = function() {
   }
 
   // Load experiment info
-  parameters = loadParameters(); // load experiment parameters (e.g. trial timing, debug mode, etc.)
-
-  if (sesstype == "meg") {
-    parameters.exp_variables.meg_mode = true;
-    parameters.exp_variables.questionnaires = false;
-  } else {
-    parameters.exp_variables.meg_mode = false;
-    parameters.exp_variables.questionnaires = true;
-  }
-  parameters.exp_variables.structure_type = structype;
+  parameters = loadParameters(sesstype,structype); // load experiment parameters (e.g. trial timing, debug mode, etc.)
 
   if (imagelist[0]!="") {
     parameters.state_images.all_states = imagelist;

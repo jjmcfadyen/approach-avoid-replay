@@ -52,20 +52,25 @@ jsPsych.plugins["exploration-test"] = (function() {
         pretty_name: 'Choices',
         default: null,
         description: 'The keys the subject is allowed to press to respond to the stimulus.'
+      },
+      background: {
+        type: jsPsych.plugins.parameterType.STRING,
+        pretty_name: 'Background',
+        default: 'stars',
+        description: 'Whether the background is black or stars.'
       }
     }
   };
 
   plugin.trial = function(display_element, trial) {
 
-    const parameters = loadParameters();
     document.getElementById('jspsych-content').classList = 'jspsych-content my-container exploration-test-main';
-    if (parameters.exp_variables.meg_mode) {
-      document.getElementsByClassName("stars")[0].style.opacity = "0";
-      document.getElementsByClassName("twinkling")[0].style.opacity = "0";
-    } else {
+    if (trial.background == 'stars') {
       document.getElementsByClassName("stars")[0].style.opacity = "1";
       document.getElementsByClassName("twinkling")[0].style.opacity = "1";
+    } else {
+      document.getElementsByClassName("stars")[0].style.opacity = "0";
+      document.getElementsByClassName("twinkling")[0].style.opacity = "0";
     }
 
     var door_names = ['DOOR 1', 'DOOR 2'];

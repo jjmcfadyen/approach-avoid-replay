@@ -1,11 +1,13 @@
 // function loadParameters() --> creates 'parameters' variable containing aspects of interest
 /*jshint esversion: 6 */
 
-window.loadParameters = function() {
+window.loadParameters = function(sesstype,structype) {
 
   var parameters = {
     "exp_variables": {
-      "debug_mode": false
+      "debug_mode": false,
+      "meg_mode": sesstype=="meg",
+      "structure_type": structype
     },
     "key_responses": {
       "left_right_buttons": [["3", "1"],[["leftarrow","ArrowLeft"],["rightarrow","ArrowRight"]]], // MEG (button-box), not MEG (keyboard)
@@ -22,8 +24,8 @@ window.loadParameters = function() {
     "timing": {
       "localiser_img": 1, // duration of localiser image (in seconds)
       "localiser_isi": [0.5, 1.5], // range of ISI for functional localiser (in seconds)
-      "exploration_isi": [0.5, 1], // in seconds (same for tutorial 1 value learning)
-      "exploration_img_duration": [3,4], // min to max duration, in seconds (same for tutorial 1 value learning)
+      "exploration_isi": [0], // in seconds (same for tutorial 1 value learning)
+      "exploration_img_duration": [3,4], // time image is on screen,
       "exploration_response_type": "time-out", // "time-out" = ends at trial_duration, "time-or-response" = ends at trial_duration unless pressed earlier, "response" = ends only when button is pressed (same for tutorial 1 value learning)
       "value_learning_response_type": "time-out",
       "choice_dur": 30, // duration of planning period (in seconds)
@@ -50,6 +52,8 @@ window.loadParameters = function() {
   };
 
   // change key responses depending on whether this is MEG (button box) or not (keyboard)
+  parameters.exp_variables.questionnaires = parameters.exp_variables.meg_mode ? false : true;
+
   parameters.key_responses.left_right_buttons = parameters.exp_variables.meg_mode ? parameters.key_responses.left_right_buttons[0] : parameters.key_responses.left_right_buttons[1];
   parameters.key_responses.up_down_buttons = parameters.exp_variables.meg_mode ? parameters.key_responses.up_down_buttons[0] : parameters.key_responses.up_down_buttons[1];
 

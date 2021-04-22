@@ -62,6 +62,12 @@ jsPsych.plugins["exploration-animation"] = (function() {
         default: null,
         description:
           "The keys the subject is allowed to press to respond to the stimulus."
+      },
+      background: {
+        type: jsPsych.plugins.parameterType.STRING,
+        pretty_name: 'Background',
+        default: 'stars',
+        description: 'Whether the background is black or stars.'
       }
     }
   };
@@ -72,7 +78,17 @@ jsPsych.plugins["exploration-animation"] = (function() {
     document.getElementsByClassName("stars")[0].style.opacity = "1";
     document.getElementsByClassName("twinkling")[0].style.opacity = "1";
 
-    const parameters = loadParameters();
+    // set up background
+    document.getElementById('jspsych-content').classList = 'jspsych-content';
+
+    if (trial.background == 'stars') {
+      document.getElementsByClassName("stars")[0].style.opacity = "1";
+      document.getElementsByClassName("twinkling")[0].style.opacity = "1";
+    } else {
+      document.getElementsByClassName("stars")[0].style.opacity = "0";
+      document.getElementsByClassName("twinkling")[0].style.opacity = "0";
+    }
+
     trial.choices = Array.isArray(trial.choices)
       ? trial.choices.flat(Infinity)
       : trial.choices;
@@ -158,10 +174,6 @@ jsPsych.plugins["exploration-animation"] = (function() {
       }, trial.trial_duration[1] * 1000);
     }
 
-    if (parameters.exp_variables.meg_mode) {
-      html += '<div id="photodiode"></div>';
-    }
-
     display_element.innerHTML = html;
     // start time
     var start_time = performance.now();
@@ -230,30 +242,23 @@ jsPsych.plugins["exploration-animation"] = (function() {
       }
 
       // hide image & text
-      var this_delay =
-        response.rt / 1000 < trial.trial_duration[0]
-          ? trial.trial_duration[0] - response.rt / 1000
-          : 0;
+      var fade_out = "fadeOut 0.3s ease-out 0s forwards";
+      if (trial.stim_num >= 2) {
+        // if it's the last stimulus, fade out the whole text window & button
+        document.getElementById(
+          "choice-container"
+        ).style.animation = fade_out;
+      } else {
+        // otherwise, just fade out the text and the image
+        document.getElementById("top-text").style.animation = fade_out;
+        if (trial.stim_num < 3) {
+          document.getElementById("state-img").style.animation = fade_out;
+        }
+      }
 
       jsPsych.pluginAPI.setTimeout(function() {
-        var fade_out = "fadeOut 0.3s ease-out 0s forwards";
-        if (trial.stim_num >= 2) {
-          // if it's the last stimulus, fade out the whole text window & button
-          document.getElementById(
-            "choice-container"
-          ).style.animation = fade_out;
-        } else {
-          // otherwise, just fade out the text and the image
-          document.getElementById("top-text").style.animation = fade_out;
-          if (trial.stim_num < 3) {
-            document.getElementById("state-img").style.animation = fade_out;
-          }
-        }
-
-        jsPsych.pluginAPI.setTimeout(function() {
           end_trial(); // waits for fade out from previous function to end
         }, trial.isi * 1000);
-      }, this_delay * 1000);
     }
 
     // function to end trial when it is time

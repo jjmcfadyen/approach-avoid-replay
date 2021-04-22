@@ -173,7 +173,7 @@ jsPsych.plugins.localiser = (function() {
         this_delay = this_delay < 0 ? 0 : this_delay;
       }
 
-      display_element.innerHTML = answer_correct ? '<p class="localiser-cue" style="color:rgb(6, 252, 46)">+</p>' : '<p class="localiser-cue" style="color:rgb(255, 0, 0)">+</p><div id="photodiode"  style="animation-duration: 0.3s;"></div>';
+      display_element.innerHTML = answer_correct ? '<p class="localiser-cue" style="color:rgb(6, 252, 46)">+</p><div id="photodiode"  style="animation-duration: 0.3s;"></div>' : '<p class="localiser-cue" style="color:rgb(255, 0, 0)">+</p><div id="photodiode"  style="animation-duration: 0.3s;"></div>';
       triggers.push(["feedback_onset",performance.now()]);
 
       jsPsych.pluginAPI.setTimeout(function() {

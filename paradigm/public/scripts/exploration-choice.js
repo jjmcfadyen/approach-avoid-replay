@@ -24,12 +24,6 @@ jsPsych.plugins["exploration-choice"] = (function() {
         default: null,
         description: 'How long to show the trial.'
       },
-      end_pause: {
-        type: jsPsych.plugins.parameterType.INT,
-        pretty_name: 'End pause',
-        default: 0,
-        description: 'How long to freeze frame after response.'
-      },
       response_ends_trial: {
         type: jsPsych.plugins.parameterType.BOOL,
         pretty_name: 'Response ends trial',
@@ -48,20 +42,27 @@ jsPsych.plugins["exploration-choice"] = (function() {
         pretty_name: 'Choices',
         default: null,
         description: 'The keys the subject is allowed to press to respond to the stimulus.'
+      },
+      background: {
+        type: jsPsych.plugins.parameterType.STRING,
+        pretty_name: 'Background',
+        default: 'stars',
+        description: 'Whether the background is black or stars.'
       }
     }
   };
 
   plugin.trial = function(display_element, trial) {
 
-    const parameters = loadParameters();
-    document.getElementById('jspsych-content').classList = 'jspsych-content my-container';
-    if (parameters.exp_variables.meg_mode) {
-      document.getElementsByClassName("stars")[0].style.opacity = "0";
-      document.getElementsByClassName("twinkling")[0].style.opacity = "0";
-    } else {
+    // set up background
+    document.getElementById('jspsych-content').classList = 'jspsych-content';
+
+    if (trial.background == 'stars') {
       document.getElementsByClassName("stars")[0].style.opacity = "1";
       document.getElementsByClassName("twinkling")[0].style.opacity = "1";
+    } else {
+      document.getElementsByClassName("stars")[0].style.opacity = "0";
+      document.getElementsByClassName("twinkling")[0].style.opacity = "0";
     }
 
     trial.choices = Array.isArray(trial.choices) ? trial.choices.flat(Infinity) : trial.choices;
@@ -97,9 +98,6 @@ jsPsych.plugins["exploration-choice"] = (function() {
     // display stimulus
     html = '<div id="choice-container" style="animation: fadeIn 0.3s ease-in 0s forwards">' + html + button_html + '</div>';
 
-    if (parameters.exp_variables.meg_mode) {
-      html += '<div id="photodiode"></div>';
-    }
     display_element.innerHTML = html;
 
     // start time
