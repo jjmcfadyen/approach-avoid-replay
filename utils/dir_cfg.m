@@ -75,6 +75,6 @@ dinfo.results_meg_classifiers = fullfile(dinfo.results_meg,'classifiers');
 dinfo.tb = 'D:\Toolboxes';
 dinfo.tb_fieldtrip = fullfile(dinfo.tb,'fieldtrip-20191119');
 dinfo.tb_spm = fullfile(dinfo.tb,'spm12');
-dinfo.tb_osl = fullfile(dinfo.tb,'osl-core-master');
+dinfo.tb_osl = fullfile(dinfo.tb,'osl-core');
 
 end

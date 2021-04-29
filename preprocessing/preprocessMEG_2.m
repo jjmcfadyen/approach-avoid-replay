@@ -23,18 +23,18 @@ if ~iscell(subjects)
     subjects = {subjects};
 end
 
-addpath('utils');
-[sinfo, dinfo] = dir_cfg();
-
 % directories
-restoredefaultpath;
-addpath(genpath(dinfo.tb_osl));
+cd ..
+addpath('utils')
+addpath('preprocessing')
 
-addpath(dinfo.tb_spm);
-spm('defaults','eeg');
+[sinfo,dinfo] = dir_cfg;
+
+addpath(genpath(dinfo.tb_osl));
+osl_startup();
 
 % Parameters
-Fs = 100; % frequency to downsample to (in Hz)
+Fs = 600; % frequency to downsample to (in Hz) - 100 or 600
 
 %% Run
 
@@ -58,7 +58,28 @@ for subj = 1:length(subjects)
     if length(fname) > 1
         error(['More than one sampling rate detected for ' subject]);
     end
-    load( fullfile(fname.folder,fname.name) );
+    T = load( fullfile(fname.folder,fname.name) );
+    T = T.triggerTable;
+    
+    % Fix label cells
+    try
+        for i = 1:size(T,1)
+            if size(T.label{i},2) == 1
+                T.label{i} = T.label{i}{1};
+            end
+        end
+    catch
+    end
+
+    % Check for duplicates
+    try
+        T = unique(T,'rows');
+    catch
+        idx = unique(T(:,1:3),'rows');
+        if size(T,1) ~= size(idx,1)
+            error('Duplicate rows in T');
+        end
+    end
     
     %% Set up directories
     
@@ -95,35 +116,19 @@ for subj = 1:length(subjects)
 
         %% Create events
         
-        % Fix label cells
-        try
-            for i = 1:size(triggerTable,1)
-                if size(triggerTable.label{i},2) == 1
-                    triggerTable.label{i} = triggerTable.label{i}{1};
-                end
-            end
-        catch
-        end
-
-        % Check for duplicates
-        try
-            triggerTable = unique(triggerTable,'rows');
-        catch
-            idx = unique(triggerTable(:,1:3),'rows');
-            if size(triggerTable,1) ~= size(idx,1)
-                error('Duplicate rows in T');
-            end
-        end
-
         % Crop for just this file
         if strcmp(session,'FL')
             idx = find(event.table.Block == fl.block_idx(f));
         else
             idx = find(event.table.Practice == fl.block_idx(f,2) & event.table.Block == fl.block_idx(f,1));
         end
-        triggerTable = triggerTable(triggerTable.trial >= idx(1) & ...
-                                    triggerTable.trial <= idx(end),:);
+        triggerTable = T(T.trial >= idx(1) & ...
+                         T.trial <= idx(end),:);
 
+        if isempty(triggerTable)
+            error('empty trigger table')
+        end
+                     
         % decide on the events
         if strcmp(session,'FL')
 
@@ -152,9 +157,14 @@ for subj = 1:length(subjects)
         elseif strcmp(session,'Task')
 
             % -- GET CHOICES --
+            
             choiceIdx = strcmp(triggerTable.label,'Risky choice') | strcmp(triggerTable.label,'Safe choice');
             transIdx = strcmp(triggerTable.label,'Door 1') | strcmp(triggerTable.label,'Door 2') | ...
                               strcmp(triggerTable.label,'Supply room');
+                          
+            if sum(choiceIdx) == 0
+                error('no choices made')
+            end
 
             % look for choices where there's an outcome trigger straight after
             choiceIdx = [0; choiceIdx(1:end-1)] == transIdx;
@@ -239,6 +249,11 @@ for subj = 1:length(subjects)
 
         end
 
+        [~,sortidx] = sort(extractfield(ev,'time'));
+        ev = ev(sortidx);
+        
+        disp(struct2table(ev))
+        
         D = events(D,1,ev);
         D.save;
 

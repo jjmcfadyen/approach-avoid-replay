@@ -272,7 +272,7 @@ elseif strcmp(subject,'503608') && strcmp(session,'Task')
         offsets(54,:) = 2.558e5;
     end
 elseif strcmp(subject,'147947') && strcmp(session,'Task')
-    if f == 1
+    if f == 8
         onsets(49,:) = 2.393e5;
     elseif f == 11
         offsets(15,:) = 6.402e4;
@@ -289,6 +289,10 @@ end
 
 % put into table
 triggers = array2table([onsets offsets offsets-onsets],'VariableNames',{'onset','offset','dur'});
+
+if any(triggers.dur > 1000)
+    error('trigger too long')
+end
 
 % plot
 figure
@@ -542,14 +546,14 @@ elseif strcmp(session,'Task')
     bidx = find(event.table.Block == fl.block_idx(f,1) & event.table.Practice == fl.block_idx(f,2));
     B = event.table(bidx,:);
 
-    if B.Practice == 1
+    if unique(B.Practice) == 1
         rtlim = Inf;
     else
         rtlim = 30;
     end
 
     % see how many choices are in the meg file
-    mChoiceIdx = strfindcell(triggers.label,'Choice');
+    mChoiceIdx = strfindcell(triggers.label,'Choice','find');
     mChoices = length(mChoiceIdx);
 
     % compare against the behavioural log

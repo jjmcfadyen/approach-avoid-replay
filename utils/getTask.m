@@ -98,7 +98,7 @@ for f = 1:length(fl.data)
         if size(d{trl},1) ~= nTrls
             d{trl} = d{trl}';
         end
-        timeinfo{trl} = D.time{trl};
+        timeinfo{trl} = D.time{trl}(1:size(d{trl},1));
     end
     
     % get label per trial & crosscheck with 'event' variable & log bad trials

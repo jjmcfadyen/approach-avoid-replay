@@ -34,7 +34,7 @@ if ~iscell(subjects)
     subjects = {subjects};
 end
         
-if ~strcmp(session,'FL') && strcmp(session,'Task')
+if ~strcmp(session,'FL') && ~strcmp(session,'Task')
     error('Wrong session type entered (FL or Task accepted)')
 end
 
@@ -76,11 +76,11 @@ for subj = 1:length(subjects)
         [tmp, fsave] = pp_triggers(fl,event,in,f,endSamples(f));
         if f == 1
             triggerTable = tmp;
-        else
+            else21
             triggerTable = [triggerTable; tmp];
         end
     end
     
-    save( fullfile(dinfo.data_meg_pp1,fsave), 'endSamples');
+    save( fullfile(dinfo.data_meg_pp1,subject,fsave), 'triggerTable');
     
 end

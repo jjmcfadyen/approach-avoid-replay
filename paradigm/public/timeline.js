@@ -1762,7 +1762,7 @@ window.loadTimeline = function(parameters, db, uid) {
         show_score: false,
         this_val: practice_struct.V[trl],
         negs: this_trl_negs,
-        isi: [0.5, 0.8],
+        isi: 0, //[0.5, 0.8],
         last_trial: trl == practice_struct.Block.length - 1 && stim == 3,
         trial_end_type: "time-out", // "time-out" = ends at trial_duration, "time-or-response" = ends at trial_duration unless pressed earlier, "response" = ends only when button is pressed
         on_finish: function() {
@@ -2100,7 +2100,7 @@ window.loadTimeline = function(parameters, db, uid) {
           this_val: test_structure.V[trl],
           negs: this_trl_negs,
           last_trial: trl == ntrials - 1 && stim == 3,
-          isi: [0.5, 0.8],
+          isi: 0, //[0.5, 0.8],
           block_num: block,
           trial_end_type: "time-out", // "time-out" = ends at trial_duration, "time-or-response" = ends at trial_duration unless pressed earlier, "response" = ends only when button is pressed
           on_finish: function() {
@@ -2268,16 +2268,16 @@ window.loadTimeline = function(parameters, db, uid) {
     ].flat(Infinity);
   } else {
     timeline = [
-      questionnaire_timeline,
-      instructions,
-      exploration_timeline,
-      repeat_exploration,
-      abort_exploration,
-      value_learning_instructions,
-      value_learning_timeline,
-      repeat_value_learning,
-      abort_value_learning,
-      negator_learning_instructions,
+      //questionnaire_timeline,
+      //instructions,
+      //exploration_timeline,
+      //repeat_exploration,
+      //abort_exploration,
+      //value_learning_instructions,
+      //value_learning_timeline,
+      //repeat_value_learning,
+      //abort_value_learning,
+      //negator_learning_instructions,
       negator_learning_timeline,
       check_negator_learning,
       main_instructions,

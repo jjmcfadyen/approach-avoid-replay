@@ -107,7 +107,7 @@ for s = 1:N
         idx = ismember(thisT.ExpTrial,test.L(:,1),'rows');
     end
     if sum(idx) ~= nTrls
-        warning([subject ' trials did not match between behaviour and MEG'])
+        error([subject ' trials did not match between behaviour and MEG'])
         missing = ~ismember(test.L,[thisT.ExpTrial thisE],'rows');
         test.L(missing,:) = [];
         test.x(:,missing) = [];
@@ -135,13 +135,15 @@ for s = 1:N
     spred{s} = cell(1,nTrls);
     for trl = 1:nTrls
 
-        if strcmp(epoch,'decision') && strcmp(decisionType,'tails') % take tails
-            for i = 1:2
+        if strcmp(epoch,'decision') && strcmp(decisionType,'tails') % take tails 
+            for i = 1:2 % first part, second part
+                
                 if ischar(decisionRange)
+                    midpoint = round(linspace(1,size(test.D{trl},1),3));
                     if i ==1
-                        elim = [1 find(test.x{trl} <= mean(test.x{trl}),1,'last')]; % start
+                        elim = [1 midpoint(2)-1]; % start
                     elseif i == 2
-                        elim = [find(test.x{trl} > mean(test.x{trl}),1,'first') length(test.x{trl})]; % end
+                        elim = [midpoint(2) midpoint(end)]; % end
                     end
                 else
                     if i ==1
@@ -154,6 +156,7 @@ for s = 1:N
                 thisD = test.D{trl}(elim(1):elim(2),:);
                 pred = cc_predict(thisD,classifier,1,1);
                 this_sq(trl,:,:,:,:,i) = ss_build(pred,U,in);
+                spred{s}{i,trl} = pred;
             end
         else % generate sequenceness for other epoch (transition, image, outcome)
             pred = cc_predict(test.D{trl},classifier,1,1);
@@ -178,11 +181,21 @@ clear this_sq
 clear tmp
 clear pred
 
-save(fullfile(dir_seq,['behavTable_' epochs{e} '.mat']),'behav');
-save(fullfile(dir_seq,['sq_' epochs{e} '.mat']),'sq');
-save(fullfile(dir_seq,['pred_' epochs{e} '.mat']),'spred');
+if strcmp(epoch,'decision') && strcmp(decisionType,'tails')
+    suffix = '_half';
+else
+    suffix = '';
+end
 
-% load(fullfile(dir_seq,['sq_' epochs{e} '.mat']));
+save(fullfile(dir_seq,['behavTable_' epochs{e} '.mat']),'behav');
+save(fullfile(dir_seq,['sq_' epochs{e} suffix '.mat']),'sq');
+save(fullfile(dir_seq,['pred_' epochs{e} suffix '.mat']),'spred');
+
+%{
+load(fullfile(dir_seq,['behavTable_' epochs{e} '.mat']));
+load(fullfile(dir_seq,['sq_' epochs{e} suffix '.mat']));
+load(fullfile(dir_seq,['pred_' epochs{e} suffix '.mat']));
+%}
 
 %% Overall sequenceness
 
@@ -222,7 +235,7 @@ lagRange = lags <= 600;
 y = [];
 for s = 1:n
     idx = strfindcell(T.Subject,subjects{sidx(s)}) & T.Forced==0;
-    y(s,:,:,:,:) = squeeze(mean(mean(D(idx,:,:,:,lagRange,:),1),4));
+    y(s,:,:,:,:,:) = squeeze(mean(mean(D(idx,:,:,:,lagRange,:),1),4));
 end
 
 opts = [];
