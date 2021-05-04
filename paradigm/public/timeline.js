@@ -694,11 +694,8 @@ window.loadTimeline = function(parameters, db, uid) {
     ];
   } else {
     instructions_pages = [
-      "<h1>The Awakening</h1>" +
-      "<p>You are a passenger aboard a spaceship making the long journey to another planet. You and the other passengers have all been cryogenically frozen and set to wake up on the day of landing.</p><p>You have woken up earlier than you were supposed to. The doors of your cryogenic chamber open and you crawl out. You look around. The other passengers are all still asleep.</p><p>The spaceship's control panel is in the middle of the room. You walk up to it and inspect the screen. It shows that the date is 5th November, 2173. You have woken up several days before your scheduled arrival date.</p><p>You decide to explore the rooms of the spaceship to see what you can find.</p>",
-
-      "<h1>The Awakening</h1>" +
-      "<p>In front of you is a large door. You walk up to it, haul it open, and walk through. The door slides shut behind you and locks.</p><p>It seems that you have entered into a small airlocked room with <strong>2 DOORS</strong> that lead to other parts of the ship.</p><p>You now have no choice but to explore the paths behind each door. You will memorise the order of the rooms along each path. Each room will be represented by an <strong>IMAGE</strong>.</p><p>Later, you will test your memory for the order of images along each path.</p>",
+      "<h1>Exploration</h1>" +
+      "<p>Imagine that you are on a spaceship. You have just entered an <strong>AIRLOCK</strong>. In front of you are now <strong>2 DOORS</strong> that each lead to a passageway containing 3 rooms.</p><p>Your task is to memorise the order of rooms behind each door. Each room will be represented by a unique <strong>image</strong>.</p>",
 
       "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the order of images behind DOOR 1 and DOOR 2.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p><p style='text-align:center;'>(Note: You can either CLICK the buttons below using your mouse, or you can use the ARROW KEYS on your keyboard.)</p>"
     ];
@@ -1036,24 +1033,11 @@ window.loadTimeline = function(parameters, db, uid) {
   ////////////////////////////////
 
   var value_learning_instructions_pages = [];
-  if (parameters.exp_variables.meg_mode) {
-    value_learning_instructions_pages = [
-      "<h1>Points</h1>" +
-      "<p style='text-align:center;'>You must <strong>MEMORISE THE NUMBER OF POINTS</strong> that you <span style='color:rgb(0,255,0);'><strong>GAIN</strong></span> or <span style='color:rgb(255,20,20);'><strong>LOSE</strong></span> in each room.</p><p>Keep an eye on the <strong>TOTAL SUM</strong> of points you have as you progress through each room. This reflects the 'cumulative sum' of points, which you will need to be able to recall easily later on. This will be shown at the bottom of the screen as your journey plays out.</p>",
-      "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the number of points gained or lost in each room.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
-    ];
-  } else {
-    value_learning_instructions_pages = [
-      "<h1>Red Alert</h1>" +
-      "<p>You are sitting in the <strong>CONTROL ROOM</strong> when suddenly the room flashes red and alarms start wailing.</p><p>You go to the control panel and read the message...</p>",
-      "<div id='warning-screen'><h2>WARNING</h2><p>ERROR #0624: INSUFFICIENT OXYGEN SUPPLY</p><p>Oxygen levels are dangerously low. Fit spacesuit and oxygen canister IMMEDIATELY. Ensure all passengers are CRYOGENICALLY FROZEN.</p></div><p>On the control panel, the light next to <strong>SUPPLY ROOM</strong> is flashing. You remember that the supply room is located at the end of a long, winding corridor. You make your way there...</p>",
-      "<p>You move as fast as you can down the long corridor towards the <strong>SUPPLY ROOM</strong>, gasping for breath as the oxygen levels plummet.</p><p>Finally, you reach the room. Inside, the space suit is hanging on a hook on the wall. You desperately pull it off the hook and climb into the suit, zipping it up and fitting the helmet over your head.</p><p>Around you there are stacks of crates, full of supplies and - oxygen canisters!</p><p>You grab the canister nearest to you and fit it into the slot on the space suit. It clicks into place and a little light next to it turns green.</p>",
-      "<p>Warmth rushes over you as you breathe in the steady flow of oxygen. You check the indicator light on the oxygen pack.</p><p>It has already turned yellow.</p><p>You must get back to the control room as fast as you can, where the oxygen levels are more stable.</p>",
-      "<p>You arrive back at the control room, just as that oxygen canister runs out and the light turns red.<p>You could go back to the <strong>SUPPLY ROOM</strong>... but the room is far away.</p><p>Instead, you decide to explore the paths behind the two doors in the airlocked room that you learnt earlier to collect more oxygen.</p>",
-      "<p style='text-align:center;'>You must <strong>MEMORISE THE NUMBER OF OXYGEN POINTS</strong> that you <span style='color:rgb(0,255,0);'><strong>GAIN</strong></span> or <span style='color:rgb(255,20,20);'><strong>LOSE</strong></span> in each room.</p><p>Keep an eye on the number of oxygen points you are <strong>CURRENTLY CARRYING</strong> as you progress through each room. This reflects the 'cumulative sum' of points, which you will need to be able to recall easily later on. This will be shown at the bottom of the screen as your journey plays out.</p>",
-      "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the number of points gained or lost in each room.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
-    ];
-  }
+  value_learning_instructions_pages = [
+    "<h1>Points</h1>" +
+    "<p>Now that you have memorised the rooms behind Door 1 and Door 2 in the Airlock, you can now learn how many <strong>POINTS</strong> you can <span style='color:rgb(0,255,0);'><strong>GAIN</strong></span> or <span style='color:rgb(255,20,20);'><strong>LOSE</strong></span> in each room.</p><p>You will also be shown a third possibility called the <strong>'SUPPLY ROOM'</strong>. This is a room that you can always access, and you will always receive +1 point</p>",
+    "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Memorise the number of points gained or lost in each room.</p><p style='text-align:center;'><strong>Ready?</strong></p><p style='text-align:center;'>Press 'Next' to begin</p><p style='text-align:center;'><small>(or press 'Previous' to look back at the instructions)</small></p>"
+  ];
 
   // Instructions
   var value_learning_instructions = {
@@ -1398,223 +1382,209 @@ window.loadTimeline = function(parameters, db, uid) {
     }
   }
 
-  var neg_filenames = [
-    seq_array_filenames[0][practice_struct.N[0][0]-1],
-    seq_array_filenames[1][practice_struct.N[0][1]-1]
-  ];
-  var neg_names = [
-    seq_array[0][practice_struct.N[0][0]-1],
-    seq_array[1][practice_struct.N[0][1]-1]
-  ];
+  // check if odd number and apply odd rule
+  function checkOdd(arr){
+    let thisSum = arr.reduce((a,b) => a + b,0);
+    let isOdd = Math.abs(thisSum) % 2;
+    let newSum = isOdd ? thisSum*(-1) : thisSum;
+    let thisObject = {
+      "isOdd": isOdd,
+      "oldSum": thisSum,
+      "newSum": newSum
+    };
+    return thisObject;
+  }
 
-  var prev_prob = [0.5, 0.5];
-  var prev_negs = [-1, -1];
-  var control_change = null;
+  // compute sums for example 1 (warning rooms: door 1 room 2, door 2 room 3)
+  var sumColours = ['rgb(22,239,243)','rgb(92,156,255)','rgb(195,139,255)'];
 
-  var indicator_screen =
-    "<p>As an example, you may see the following screen before making your choice. Use this to mentally plan each possible outcome and then make the best decision (i.e. the choice that is the most likely to get you the most points):</p>" +
-    '<div id="warning-screen" style="display:grid; grid-template-rows: auto auto; grid-template-columns: 60% 40%;">' +
+  var example1 = new Array(2);
+  var example1_arrays = [practice_struct.V[0][0].slice(0,2), practice_struct.V[0][1].slice(0,3)];
+  var example1_objects = [checkOdd(example1_arrays[0]), checkOdd(example1_arrays[1])];
+  for (let i = 0; i < 2; i++) {
+    if (example1_objects[i].isOdd) {
+      example1[i] = "<p style='margin:0'><strong><span style='color:" + sumColours[example1_arrays[i].length-1] + ";'>" + example1_objects[i].oldSum + "</span> is <span style='color:rgb(255,161,0);'>ODD</span></strong></p>" +
+                    "<p style='margin:0'><strong>New Sum = <span style='color:" + sumColours[example1_arrays[i].length-1] + ";'>" + example1_objects[i].newSum + "</strong></span></p>";
+    } else {
+      example1[i] = "<p style='margin:0'><strong><span style='color:" + sumColours[example1_arrays[i].length-1] + ";'>" + example1_objects[i].oldSum + "</span> is EVEN</strong></p>" +
+                    "<p style='margin:0'><strong>Sum remains unchanged: <span style='color:" + sumColours[example1_arrays[i].length-1] + ";'>" + example1_objects[i].newSum + "</strong></span></p>";
+    }
+  }
+
+  // compute sums for example 1 (warning rooms: door 1 room 1, door 2 room 2)
+  var example2 = new Array(2);
+  var example2_arrays = [practice_struct.V[0][0].slice(0,1), practice_struct.V[0][1].slice(0,2)];
+  var example2_objects = [checkOdd(example2_arrays[0]), checkOdd(example2_arrays[1])];
+  for (let i = 0; i < 2; i++) {
+    if (example2_objects[i].isOdd) {
+      example2[i] = "<p style='margin:0'><strong><span style='color:" + sumColours[example2_arrays[i].length-1] + ";'>" + example2_objects[i].oldSum + "</span> is <span style='color:rgb(255,161,0);'>ODD</span></strong></p>" +
+                    "<p style='margin:0'><strong>New Sum = <span style='color:" + sumColours[example2_arrays[i].length-1] + ";'>" + example2_objects[i].newSum + "</strong></span></p>";
+    } else {
+      example2[i] = "<p style='margin:0'><strong><span style='color:" + sumColours[example2_arrays[i].length-1] + ";'>" + example2_objects[i].oldSum + "</span> is EVEN</strong></p>" +
+                    "<p style='margin:0'><strong>Sum remains unchanged: <span style='color:" + sumColours[example2_arrays[i].length-1] + ";'>" + example2_objects[i].newSum + "</strong></span></p>";
+    }
+  }
+
+  var warning_screen = '<div id="warning-screen" style="display:grid; grid-template-rows: auto auto; grid-template-columns: 60% 40%;">' +
     '<h3 style="text-align:center;">Warning indicators:</h3>' +
     '<h3 style="text-align:center;">Door reliability:</h3>' +
     '<div style="display:flex; justify-content:space-around; align-items:center; flex-direction:row; width:100%;">' +
-    //'<div><p class="neg-cue">' +
-    //seq_array[0][practice_struct.N[0][0]-1] + '</p></div>' +
-    //'<div><p class="neg-cue">' +
-    //seq_array[1][practice_struct.N[1][0]-1] + '</p></div>' +
-    //'</div>' +
-    '<img src="' + seq_array_filenames[0][practice_struct.N[0][0]-1] + '" width="45%" style="padding:1%;">' +
-    '<img src="' + seq_array_filenames[1][practice_struct.N[1][0]-1] + '" width="45%" style="padding:1%;"></div>' +
+      '<img src="' + seq_array_filenames[0][practice_struct.N[0][0]-1] + '" width="45%" style="padding:1%;">' +
+      '<img src="' + seq_array_filenames[1][practice_struct.N[1][0]-1] + '" width="45%" style="padding:1%;">' +
+    '</div>' +
     '<div style="height:45%; width:80%; display:flex; align-items:center; flex-direction:column; margin:auto; justify-content:space-evenly;">' +
-    '<div style="height:45%; width:80%; display:flex; align-items:centerHey; flex-direction:column; margin:auto; justify-content:space-evenly; "><div id="door-1-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 1: 50%</big></p><div id="door-1-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div><div id="door-2-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 2: 50%</big></p><div id="door-2-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div></div></div></div>' +
-    '<p>In this example, the <strong>"' + seq_array[0][practice_struct.N[0][0]-1] + '"</strong> room and the <strong>"' + seq_array[1][practice_struct.N[1][0]-1] + '"</strong> room can potentially reverse your points (but only if the total number of points you have in the room is an ODD number).</p><p>There is also a 50-50 chance that Door 1 or Door 2 will be open (see next page for more details).</p>';
-
-  function oddeven_text(path) {
-    var these_vals = practice_struct.V[0][path].slice(0);
-    var these_neg_vals = practice_struct.nV[0][path].slice(0);
-
-    var brackets0 = these_neg_vals[0];
-    var brackets1 = these_neg_vals[1];
-    var brackets2 = these_neg_vals[2];
-    if (practice_struct.N[0][path]-1 == 0) {
-      brackets0 = these_vals[0] + '<span style="color:rgb(248,161,2);"> ... ' + these_neg_vals[0] + '</span>';
-    } else if (practice_struct.N[0][path]-1 == 1) {
-      brackets1 = (these_vals[0] + these_vals[1]) + '<span style="color:rgb(248,161,2);"> ... ' + these_neg_vals[1] + '</span>';
-    } else if (practice_struct.N[0][path]-1 == 2) {
-      brackets2 = (these_vals[0] + these_vals[1] + these_vals[2]) + '<span style="color:rgb(248,161,2);"> ... ' + these_neg_vals[2] + '</span>';
-    }
-
-    var images = "";
-    var text =
-      '<div id="value-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%; margin:auto;"><p style="text-align:left;">Room points: </p><p style="width:100%; text-align:center;">' +
-      these_vals[0] +
-      '</p></div><p style="width:33%; text-align:center;">' +
-      these_vals[1] +
-      '</p><p style="width:33%; text-align:center;">' +
-      these_vals[2] +
-      "</p></div>" +
-      '<div id="cumulative-value-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Gained/Lost: </p><p style="width:100%; text-align:center;"><strong>' +
-      brackets0 +
-      '</strong></p></div><p style="width:33%; text-align:center;">' +
-      these_neg_vals[0] +
-      " + " +
-      these_vals[1] +
-      " = <strong>" +
-      brackets1 +
-      '</strong></p><p style="width:33%; text-align:center;">' +
-      these_neg_vals[1] +
-      " + " +
-      these_vals[2] +
-      " = <strong>" +
-      brackets2 +
-      "</strong></p></div>";
-
-    var oddeven = "";
-    var badpath = these_neg_vals[practice_struct.N[path]-1] % 2;
-    for (let i = 0; i < 3; i++) {
-      var odd_label = Math.abs(these_neg_vals[i]) % 2 ? "ODD" : "EVEN";
-
-      if (i == practice_struct.N[0][path]-1) {
-        images +=
-          '<img src="' +
-          seq_array_filenames[path][i] +
-          '" alt="' +
-          seq_array[path][i] +
-          '" style="border:8px solid rgb(255, 161, 0);">';
-        if (odd_label == "ODD") {
-          if (i == 0) {
-            oddeven +=
-              '<p style="width:100%; text-align:center; color:rgb(255, 161, 0);"><strong>ODD</strong>: total sum of points will be reversed!</p></div>';
-          } else {
-            oddeven +=
-              '<p style="width:33%; text-align:center; color:rgb(255, 161, 0);"><strong>ODD</strong>: total sum of points will be reversed!</p>';
-          }
-        } else {
-          if (i == 0) {
-            oddeven +=
-              '<p style="width:100%; text-align:center; color:rgb(0, 255, 0);"><strong>' +
-              odd_label +
-              "</strong></p></div>";
-          } else {
-            oddeven +=
-              '<p style="width:33%; text-align:center; color:rgb(0, 255, 0);"><strong>' +
-              odd_label +
-              "</strong></p>";
-          }
-        }
-      } else {
-        images +=
-          '<img src="' +
-          seq_array_filenames[path][i] +
-          '" alt="' +
-          seq_array[path][i] +
-          '">';
-        if (i == 0) {
-          oddeven +=
-            '<p style="width:100%; text-align:center;"><strong>' +
-            odd_label +
-            "</strong></p></div>";
-        } else {
-          oddeven +=
-            '<p style="width:33%; text-align:center;"><strong>' +
-            odd_label +
-            "</strong></p>";
-        }
-      }
-    }
-
-    var outcome_colour =
-      these_neg_vals[2] < 0 ? "rgb(255,0,0)" : "rgb(0,255,0)";
-
-    text +=
-      '<div id="result-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;">Reversal: </p>' +
-      oddeven +
-      "</div>" +
-      '<div id="outcome-container" style="display:flex; flex-direction:row; flex-wrap:nowrap; justify-content:space-around;"><div style="display:flex; flex-wrap:nowrap; flex-direction:row; justify-content:space-between; width:33%;"><p style="text-align:left;"><strong><big>Final outcome:</strong></big></p><p style="width:100%; text-align:center; color:rgb(255, 161, 0);">&nbsp</p></div><p style="width:33%; text-align:center;">&nbsp</p><p style="width:33%; text-align:center;"><span style="color:' +
-      outcome_colour +
-      ';"><strong><big>' +
-      these_neg_vals[2] +
-      "</big></strong></span></p></div>";
-
-    return [images, text];
-  }
-
-  var imagestext1 = oddeven_text(0);
-  var imagestext2 = oddeven_text(1);
+    '<div style="height:45%; width:80%; display:flex; align-items:centerHey; flex-direction:column; margin:auto; justify-content:space-evenly; "><div id="door-1-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 1: 50%</big></p><div id="door-1-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div><div id="door-2-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 2: 50%</big></p><div id="door-2-prob-bar"><div style="width:100%; height:8px; border:3px solid rgb(255, 230, 0); padding:0; margin:0;"><div style="width:50%; height:8px; background:rgb(255, 230, 0); padding:0; margin:0;"></div></div></div></div></div></div></div>';
 
   var negator_learning_instructions_pages = [];
-  if (parameters.exp_variables.meg_mode) {
-    negator_learning_instructions_pages = [
-      "<h1>Main Task Practice</h1>" +
-      "<p>Please wait for the experimenter to explain the next part of the task.</p>",
-
-      indicator_screen,
-      "<p>To plan for Door 1, you would need to calculate the following:</p>" +
-      '<div id="value-image-container2" style="opacity:1;">' +
-      imagestext1[0] +
+  negator_learning_instructions_pages = [
+    "<h1>Risky Decision Task</h1>" +
+    "<p>You have now learnt the order of rooms (i.e., images) behind Door 1 and Door 2, as well as the points you can gain or lose in each room.</p>" +
+    "<div style='display:flex; flex-direction:column; justify-content:center; align-items:center;'>" +
+      "<h3>Door 1</h3>" +
+      "<div style='display:flex; flex-direction:row'>" +
+        "<div style='display:flex; flex-direction:column; align-items:center;'>" +
+          "<p><strong>" + seq_array[0][0] + "</strong></p>" +
+          "<img src='" + seq_array_filenames[0][0] + "' style='width:50%;'><p>" + practice_struct.V[0][0][0] + "</p></div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center;'>" +
+          "<p><strong>" + seq_array[0][1] + "</strong></p>" +
+          "<img src='" + seq_array_filenames[0][1] + "' style='width:50%;'><p>" + practice_struct.V[0][0][1] + "</p></div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center;'>" +
+          "<p><strong>" + seq_array[0][2] + "</strong></p>" +
+          "<img src='" + seq_array_filenames[0][2] + "' style='width:50%;'><p>" + practice_struct.V[0][0][2] + "</p></div>" +
       "</div>" +
-      imagestext1[1],
-
-      "<p>To plan for Door 2, you would need to calculate the following:</p>" +
-      '<div id="value-image-container2" style="opacity:1;">' +
-      imagestext2[0] +
+      "<h3>Door 2</h3>" +
+      "<div style='display:flex; flex-direction:row'>" +
+        "<div style='display:flex; flex-direction:column; align-items:center;'>" +
+          "<p><strong>" + seq_array[1][0] + "</strong></p>" +
+          "<img src='" + seq_array_filenames[1][0] + "' style='width:50%;'><p>" + practice_struct.V[0][1][0] + "</p></div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center;'>" +
+          "<p><strong>" + seq_array[1][1] + "</strong></p>" +
+          "<img src='" + seq_array_filenames[1][1] + "' style='width:50%;'><p>" + practice_struct.V[0][1][1] + "</p></div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center;'>" +
+          "<p><strong>" + seq_array[1][2] + "</strong></p>" +
+          "<img src='" + seq_array_filenames[1][2] + "' style='width:50%;'><p>" + practice_struct.V[0][1][2] + "</p></div>" +
       "</div>" +
-      imagestext2[1],
+    "</div>",
+    "<h1>Risky Decision Task</h1>" +
+    "<p>For the remainder of the experiment, you will use the information you have memorised in a risky gambling-style task.</p><p>On each trial, you will be presented with a screen that looks like this:</p>" +
+    warning_screen,
 
-      '<div><p style="align-text:center;"><strong>You can earn a <span style="color:rgb(0,255,0);">BONUS of up to £10</span> if you make the best possible choices.</strong></p><p>To do this, you will have to calculate the total points for Door 1 and Door 2, and then decide whether you should risk going through the airlock, or instead go to the supply room.<p>' +
-      '<p style="text-align:center;">&nbsp</p><p style="text-align:center;">Please wait for the experimenter to begin the program.</p><p style="text-align:center;"><strong>Remember to stay very still during scanning.</strong></p></div>'
-    ].flat(1);
-  } else {
-    negator_learning_instructions_pages = [
-      "<h1>Survival</h1>" +
-      "<p>Here is a recap of what you have learnt so far.</p>" +
-      "<h2>Aim</h2><p>Your aim is to collect as many oxygen points as possible so that you can maximise your chances of survival when the ship finally reaches its destination.</p><p>You will receive <strong><span style='color:rgb(0,255,0);'>real bonus money</span></strong> based on how well you maximise your points!</p>" +
-      "<h2>Choices</h2><p>You have learnt that there are two paths - Door 1 and Door 2 (which are accessed via the AIRLOCK) - and the SUPPLY ROOM. Each day, you can choose to go to either the:</p>" +
-      '<ul style="text-align:left;">' +
-      "<li><strong>Airlock</strong> (where you can access Door 1 or Door 2)</li>" +
-      "<li><strong>Supply Room</strong> (where you will always return with 1 oxygen point)</li>" +
-      "</ul>",
+    '<h1>Risky Decision Task</h1><h2>Warning Indicators</h2>' +
+    '<p>On each trial, there will be <strong>TWO</strong> rooms (one from each path) that will have a <strong>WARNING INDICATOR</strong>. This means that you must apply something called the <strong>ODD RULE</strong> to that room.</p>' +
+    '<p style="color:rgb(255,161,0); font-size:1.5rem; text-align:center; line-height:2rem;"><strong>THE ODD RULE</strong>:<br><strong>If the <u>cumulative sum of points</u> <i>in that room</i> is an ODD number (e.g., 1, 3, 5, 7, 9, etc.), then you must multiply the <u>cumulative sum</u> <i>in that room</i> by -1.</strong></p><p>This essentially "flips" the sum of points at that particular stage of your journey along the path (i.e., a positive sum can become negative, or a negative sum can become positive). This sum is then taken to the next room. Hence, if a room with a warning indicator <i>does</i> have an odd sum, then this can significantly alter the course of the points you add up along a path.</p>',
 
-      "<h1>New Rules</h1><h2>Door Probabilities</h2>" +
-      '<p>If you choose to go through the airlock...' +
-      '<ul style="padding-left:25px;"><li>Only <strong>ONE</strong> of the doors will ever be open at a time.</li>' +
-      "<li>You will not know WHICH door is open until you get to the airlock.</li>" +
-      "<li>To help you decide, you will be told the <strong>PROBABILITY</strong> that Door 1 vs Door 2 will be open (e.g., 90% chance Door 1, 10% chance Door 2)</li>" +
-      "<li>The door to the supply room will <i>always</i> be open, and you will <i>always</i> retrieve 1 oxygen point.</li></ul>" +
-      "</ul></p>",
+    // EXAMPLE 1
+    '<h1>Risky Decision Task</h1><h2>Warning Indicators</h2>' +
+    '<p>For example, let`s say that the <strong>second</strong> room behind Door 1 and the <strong>third</strong> room behind Door 2 have warning indicators:</p>' +
 
-      "<h1>New Rules</h1><h2>Hazardous Rooms</h2>" +
-      '<p>Each day, you will receive a warning that some of the rooms can <strong>REVERSE</strong> your points:</p>' +
-      '<ul style="text-align:left;">' +
-      '<li>There will always be TWO "hazardous" rooms; one behind Door 1 and one behind Door 2.</li>' +
-      "<li>If you <strong>LEAVE</strong> one of these rooms while carrying an <strong>ODD</strong> number of oxygen points, the points will <strong>REVERSE</strong>. This means that if they were positive then they will become <strong><span style='color:rgb(255,0,0);'>NEGATIVE</span></strong>, and if they were negative then they will become <strong><span style='color:rgb(0,255,0);'>POSITIVE</span></strong>.</li>" +
-      "</ul>" +
-      '<p>Proceed to the next page to see a worked-through example. Please ask the experimenter for any help.</p>',
-
-
-      indicator_screen,
-      "<p>To plan for Door 1, you would need to calculate the following:</p>" +
-      '<div id="value-image-container2" style="opacity:1;">' +
-      imagestext1[0] +
+    "<div style='display:flex; flex-direction:column; justify-content:center; align-items:center;'>" +
+      "<h3>Door 1</h3>" +
+      "<div style='display:flex; flex-direction:row'>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[0][0] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][0][0] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + practice_struct.V[0][0][0] + "</span></strong></p>" +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[0][1] + "' style='width:50%; border:8px solid rgb(255, 161, 0);'>" +
+          "<p><strong>Value = " + practice_struct.V[0][0][1] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + practice_struct.V[0][0][0] + "</span>  +  " + practice_struct.V[0][0][1] + "  =  <span style='color:" + sumColours[1] + ";'>" + checkOdd(practice_struct.V[0][0].slice(0,2)).oldSum + "</span></strong></p>" +
+          example1[0] +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[0][2] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][0][2] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[1] + ";'>" + checkOdd(practice_struct.V[0][0].slice(0,2)).newSum + "</span>  +  " + practice_struct.V[0][0][2] + "  =  <span style='color:" + sumColours[2] + ";'>" + [checkOdd(practice_struct.V[0][0].slice(0,2)).newSum,practice_struct.V[0][0][2]].reduce((a,b) => a+b,0)  + "</span></strong></p>" +
+          "<p><strong><u>Door 1 Final Sum = " + [checkOdd(practice_struct.V[0][0].slice(0,2)).newSum,practice_struct.V[0][0][2]].reduce((a,b) => a+b,0) + "</u></strong></p>" +
+        "</div>" +
       "</div>" +
-      imagestext1[1],
 
-      "<p>To plan for Door 2, you would need to calculate the following:</p>" +
-      '<div id="value-image-container2" style="opacity:1;">' +
-      imagestext2[0] +
+      "<h3>Door 2</h3>" +
+      "<div style='display:flex; flex-direction:row'>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[1][0] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][1][0] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + practice_struct.V[0][1][0] + "</span></strong></p>" +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[1][1] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][1][1] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + practice_struct.V[0][1][0] + "</span>  +  " + practice_struct.V[0][1][1] + "  =  <span style='color:" + sumColours[1] + ";'>" + checkOdd(practice_struct.V[0][1].slice(0,2)).oldSum + "</span></strong></p>" +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[1][2] + "' style='width:50%; border:8px solid rgb(255, 161, 0);'>" +
+          "<p><strong>Value = " + practice_struct.V[0][1][2] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[1] + ";'>" + checkOdd(practice_struct.V[0][1].slice(0,2)).oldSum + "</span>  +  " + practice_struct.V[0][1][2] + "  =  <span style='color:" + sumColours[2] + ";'>" + [checkOdd(practice_struct.V[0][1].slice(0,2)).oldSum,practice_struct.V[0][1][2]].reduce((a,b) => a+b,0)  + "</span></strong></p>" +
+          example1[1] +
+          "<p><strong><u>Door 2 Final Sum = " + checkOdd(practice_struct.V[0][1].slice(0,3)).newSum + "</u></strong></p>" +
+        "</div>" +
       "</div>" +
-      imagestext2[1],
+    "</div>",
 
-      '<div><p><strong>You can earn a <span style="color:rgb(0,255,0);">BONUS of up to £5</span> if you make the best possible choices!</strong></p><p>To do this, you will have to calculate the total points for Door 1 and Door 2, and then decide whether you should risk going through the airlock, or instead go to the supply room.<p>' +
-      '<p>Notes:</p>' +
-      '<ul style="text-align:left;">' +
-      '<li><strong>The supply room will be CLOSED for the first few trials</strong>, so you will have to go through the AIRLOCK. These are called <span style="color:rgb(154, 72, 241)"><strong>forced choice</strong></span> trials. After the supply room OPENS, you will be able to choose between the airlock and the supply room.</li>' +
-      '<li>We want you to <i>mentally imagine</i> the pictures for each room as much as possible. To encourage this, we will only SHOW you the images on the first few trials (i.e., the <span style="color:rgb(154, 72, 241)"><strong>forced choice</strong></span> trials). The rest of the time, the images will be replaced by "?" symbols.</li></ul>' +
-      '<p>Before we do the main experiment, we will let you do a practice so that you are as familiar as possible with the game.</p>',
+    // EXAMPLE 2
+    '<h1>Risky Decision Task</h1><h2>Warning Indicators</h2>' +
+    '<p>As another example, let`s say that the <strong>first</strong> room behind Door 1 and the <strong>second</strong> room behind Door 2 have warning indicators:</p>' +
 
-      '<p style="text-align:center;"><strong>Ready for a practice?</strong></p><p style="text-align:center;">Press "Next" to begin</p><p style="text-align:center;"><small>(or press "Previous" to look back at the instructions)</small></p>'
-    ].flat(1);
-  }
+    "<div style='display:flex; flex-direction:column; justify-content:center; align-items:center;'>" +
+      "<h3>Door 1</h3>" +
+      "<div style='display:flex; flex-direction:row'>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[0][0] + "' style='width:50%; border:8px solid rgb(255, 161, 0);'>" +
+          "<p><strong>Value = " + practice_struct.V[0][0][0] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + practice_struct.V[0][0][0] + "</span></strong></p>" +
+          example2[0] +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[0][1] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][0][1] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + checkOdd(practice_struct.V[0][0].slice(0,1)).newSum + "</span>  +  " + practice_struct.V[0][0][1] + "  =  <span style='color:" + sumColours[1] + ";'>" + [checkOdd(practice_struct.V[0][0].slice(0,1)).newSum,practice_struct.V[0][0][1]].reduce((a,b)=>a+b,0) + "</span></strong></p>" +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[0][2] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][0][2] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[1] + ";'>" + [checkOdd(practice_struct.V[0][0].slice(0,1)).newSum,practice_struct.V[0][0][1]].reduce((a,b)=>a+b,0) + "</span>  +  " + practice_struct.V[0][0][2] + "  =  <span style='color:" + sumColours[2] + ";'>" + [checkOdd(practice_struct.V[0][0].slice(0,1)).newSum,practice_struct.V[0][0][1],practice_struct.V[0][0][2]].reduce((a,b)=>a+b,0)  + "</span></strong></p>" +
+          "<p><strong><u>Door 1 Final Sum = " + [checkOdd(practice_struct.V[0][0].slice(0,1)).newSum,practice_struct.V[0][0][1],practice_struct.V[0][0][2]].reduce((a,b)=>a+b,0)  + "</u></strong></p>" +
+        "</div>" +
+      "</div>" +
 
+      "<h3>Door 2</h3>" +
+      "<div style='display:flex; flex-direction:row'>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[1][0] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][1][0] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + practice_struct.V[0][1][0] + "</span></strong></p>" +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[1][1] + "' style='width:50%; border:8px solid rgb(255, 161, 0);'>" +
+          "<p><strong>Value = " + practice_struct.V[0][1][1] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[0] + ";'>" + practice_struct.V[0][1][0] + "</span>  +  " + practice_struct.V[0][1][1] + "  =  <span style='color:" + sumColours[1] + ";'>" + checkOdd(practice_struct.V[0][1].slice(0,2)).oldSum + "</span></strong></p>" +
+          example2[1] +
+        "</div>" +
+        "<div style='display:flex; flex-direction:column; align-items:center; justify-content:flex-start;'>" +
+          "<img src='" + seq_array_filenames[1][2] + "' style='width:50%; border:8px solid transparent;'>" +
+          "<p><strong>Value = " + practice_struct.V[0][1][2] + "</span></strong></p>" +
+          "<p><strong>Sum  =  <span style='color:" + sumColours[1] + ";'>" + checkOdd(practice_struct.V[0][1].slice(0,2)).newSum + "</span>  +  " + practice_struct.V[0][1][2] + "  =  <span style='color:" + sumColours[2] + ";'>" + [checkOdd(practice_struct.V[0][1].slice(0,2)).newSum,practice_struct.V[0][1][2]].reduce((a,b) => a+b,0)  + "</span></strong></p>" +
+          "<p><strong><u>Door 2 Final Sum = " + [checkOdd(practice_struct.V[0][1].slice(0,2)).newSum,practice_struct.V[0][1][2]].reduce((a,b) => a+b,0) + "</u></strong></p>" +
+        "</div>" +
+      "</div>" +
+    "</div>",
+
+    '<h1>Risky Decision Task</h1><h2>Warning Indicators</h2>' +
+    '<p>As you can see, the <strong>final sum</strong> of points for Door 1 and Door 2 can significantly change depending on <i>which</i> rooms have a warning indicator.</p>' +
+    '<p>NOTE: One room from each path will always have a warning indicator.</p>',
+
+    '<h1>Risky Decision Task</h1><h2>Warning Indicators</h2>' +
+    '<p>Your task is to use the <strong>warning indicators</strong> shown at the start of each trial to <strong>calculate the final sum of points</strong> for Door 1 and Door 2. You must do this <strong>in your head</strong> by remembering the image order and the value of each image.</p>' +
+    warning_screen +
+    '<p>You will then choose between TWO options:</p>' +
+    '<ul>' +
+      '<li><strong>1. AIRLOCK</strong>: If you choose to go to the Airlock, you will go to <i>either</i> Door 1 or Door 2, according to the PROBABILITIES shown on screen.</li>' +
+      '<li><strong>2. SUPPLY ROOM</strong>: If you choose to go to the Supply Room, you will receive +1 point.' +
+    '</ul>' +
+    '<p>You will need to decide whether it is worth risking the Airlock, or if you would be better off going to the Supply Room.</p>',
+
+    '<p style="text-align:center;"><strong>Ready for a practice?</strong></p><p>For the first 6 trials, we will only let you go through the <strong>Airlock</strong>. These are called <strong><span style="color:rgb(203,91,255);">"forced choice"</span></strong> trials. These happen so you get a chance to see how the journey plays out for Door 1 and Door 2. After the forced choice trials, the <strong>images will be hidden</strong>, so you will have to use your <strong>memory</strong></p><p style="text-align:center;">Press "Next" to begin</p><p style="text-align:center;"><small>(or press "Previous" to look back at the instructions)</small></p>'
+  ].flat(1);
 
   var negator_learning_instructions = {
     type: "custom-instructions",
@@ -1636,24 +1606,7 @@ window.loadTimeline = function(parameters, db, uid) {
     let this_trl_prob = [practice_struct.P[trl], 1 - practice_struct.P[trl]];
     let this_trl_negs = [practice_struct.N[trl][0]-1,practice_struct.N[trl][1]-1];
 
-    let prob_change = [
-      this_trl_prob[0] != prev_prob[0],
-      this_trl_prob[1] != prev_prob[1]
-    ];
-    let neg_change = [
-      this_trl_negs[0] != prev_negs[0],
-      this_trl_negs[1] != prev_negs[1]
-    ];
-
-    // if (prob_change.includes(true) && neg_change.includes(true)) {
-    //   control_change = 3;
-    // } else if (prob_change.includes(true)) {
-    //   control_change = 1;
-    // } else if (neg_change.includes(true)) {
-    //   control_change = 2;
-    // } else {
-      control_change = 0;
-    // }
+    var control_change = 0;
 
     var choiceType;
     if (practice_struct.Forced[trl] != 'free')
@@ -1879,9 +1832,6 @@ window.loadTimeline = function(parameters, db, uid) {
       };
       negator_learning_timeline.push(main_instructions_checkpoint);
     }
-
-    prev_prob = this_trl_prob.slice(0);
-    prev_negs = this_trl_negs.slice(0);
   }
 
   /* check if they failed the learning phase */
@@ -1932,7 +1882,7 @@ window.loadTimeline = function(parameters, db, uid) {
   "<ul style='line-height:2rem;'><li>You will only have <strong>" +
   parameters.timing.choice_dur +
   " SECONDS</strong> to PLAN which choice to make each time. A timer will be shown. If the timer runs out, you will LOSE 1 oxygen point.</li>" +
-  "<li>The <strong>NUMBER OF OXYGEN POINTS</strong> you pick up in each room will gradually <strong>CHANGE</strong> across the experiment. Keep track of this.</li>" +
+  "<li>The <strong>NUMBER OF POINTS</strong> you pick up in each room will <strong>CHANGE</strong> at the start of each block in the experiment. Keep track of this by paying attention to the value of each image when you go through the Airlock at the beginning of the block (this is what the <strong><span style='color:rgb(203,91,255);'>'forced choice'</span></strong> trials are for).</li>" +
   "</ul>",
 
   "<p style='text-align:center; color:#FFAE57'><strong>YOUR TASK:</strong> Calculate the total sum of points for Door 1 and Door 2, according to which rooms are HAZARDOUS. Then, depending on whether Door 1 or Door 2 is more likely to be open, decide if it's worth the risk to go to the airlock or to get 1 point from the supply room.</p><p style='text-align:center'><strong>Ready?</strong></p><p style='text-align:center'>Press 'Next' to begin</p><p style='text-align:center'><small>(or press 'Previous' to look back at the instructions)</small></p>"
@@ -1975,24 +1925,7 @@ window.loadTimeline = function(parameters, db, uid) {
       let this_trl_prob = [test_structure.P[trl], 1 - test_structure.P[trl]];
       let this_trl_negs = [test_structure.N[trl][0]-1,test_structure.N[trl][1]-1];
 
-      let prob_change = [
-        this_trl_prob[0] != prev_prob[0],
-        this_trl_prob[1] != prev_prob[1]
-      ];
-      let neg_change = [
-        this_trl_negs[0] != prev_negs[0],
-        this_trl_negs[1] != prev_negs[1]
-      ];
-
-      if (prob_change.includes(true) && neg_change.includes(true)) {
-        control_change = 3;
-      } else if (prob_change.includes(true)) {
-        control_change = 1;
-      } else if (neg_change.includes(true)) {
-        control_change = 2;
-      } else {
-        control_change = 0;
-      }
+      var control_change = 0;
 
       var choiceType;
       if (test_structure.Forced[trl] != 'free')
@@ -2200,10 +2133,6 @@ window.loadTimeline = function(parameters, db, uid) {
         };
         test_timeline.push(test_animation);
       }
-
-      prev_prob = this_trl_prob.slice(0);
-      prev_negs = this_trl_negs.slice(0);
-
     }
 
     var continueText = parameters.exp_variables.meg_mode ? 'The experimenter will be with you shortly.' : 'Press the button below when you\'re ready to continue.';
@@ -2268,16 +2197,16 @@ window.loadTimeline = function(parameters, db, uid) {
     ].flat(Infinity);
   } else {
     timeline = [
-      //questionnaire_timeline,
-      //instructions,
-      //exploration_timeline,
-      //repeat_exploration,
-      //abort_exploration,
-      //value_learning_instructions,
-      //value_learning_timeline,
-      //repeat_value_learning,
-      //abort_value_learning,
-      //negator_learning_instructions,
+      questionnaire_timeline,
+      instructions,
+      exploration_timeline,
+      repeat_exploration,
+      abort_exploration,
+      value_learning_instructions,
+      value_learning_timeline,
+      repeat_value_learning,
+      abort_value_learning,
+      negator_learning_instructions,
       negator_learning_timeline,
       check_negator_learning,
       main_instructions,

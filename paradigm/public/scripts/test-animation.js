@@ -318,7 +318,7 @@ jsPsych.plugins["test-animation"] = (function() {
 
           // trial.trial_duration += 2; // add time the trial duration
           outcome_text1 = '<p id="bottom-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + animation_delay[0] + 's forwards; color:' + outcome_color + '; text-align:center;"><strong>' + plus_sign + outcome_val + ' point' + plural + '.</strong></p>';
-          outcome_text2 = '<p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + (animation_delay[0]+1) + 's forwards; color:rgb(255, 216, 0); text-align:center;"><strong>HAZARD ROOM</strong>: Total sum is an <strong>odd number</strong>. <i><strong>Reversing sum...</strong></i></p>';
+          outcome_text2 = '<p id="outcome-text" style="opacity: 0; animation: fadeIn 0.3s ease-in ' + (animation_delay[0]+1) + 's forwards; color:rgb(255, 216, 0); text-align:center;"><strong>ODD RULE</strong>: Total sum is an <strong>odd number</strong>. <i><strong>Flipping sum...</strong></i></p>';
           trial.trial_duration[1] = trial.trial_duration[1] + 1;
         }
         html += outcome_text1 + outcome_text2 + '</div>';
@@ -345,7 +345,7 @@ jsPsych.plugins["test-animation"] = (function() {
         plus_sign = outcome_val > 0 ? '<font color="#38ff46">+' : '';
         font_end = outcome_val > 0 ? '</font>' : '';
         html = '<div class="choice-background">' +
-          '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;">You return to the control room with: <strong>' + plus_sign + outcome_val + ' point' + plural + '.' + font_end + '</strong></p>' +
+          '<p id="top-text" style="animation: fadeIn 0.3s ease-in 0s forwards; text-align:center;">You return with: <strong>' + plus_sign + outcome_val + ' point' + plural + '.' + font_end + '</strong></p>' +
           '</div>';
         change_score = false;
         if (trial.is_practice == 2){

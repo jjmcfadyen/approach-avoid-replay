@@ -268,7 +268,7 @@ jsPsych.plugins["test-choice"] = (function() {
       var neg_html = '';
       var neg_flex = '';
       var neg_order = [0, 1]; //jsPsych.randomization.shuffle([[0,1],[1,0]])[0]; // randomise whether the door 1 or door 2 negs are shown left/right
-      if (trial.imgs_or_words == "images" & trial.choice != "free") {
+      if ((trial.imgs_or_words == "images" & trial.choice != "free")) {
         neg_html = '<img src="' + trial.stimuli_info.seq_array_filenames[neg_order[0]][trial.trial_negs[neg_order[0]]] + '" width="45%" style="padding:1%;">' +
           '<img src="' + trial.stimuli_info.seq_array_filenames[neg_order[1]][trial.trial_negs[neg_order[1]]] + '" width="45%" style="padding:1%;">';
         neg_flex = 'row';
@@ -279,7 +279,7 @@ jsPsych.plugins["test-choice"] = (function() {
 
       html += '<div id="warning-screen" style="display:grid; grid-template-rows: auto auto; grid-template-columns: auto auto;">' +
         '<h3 style="text-align:center;">Warning indicators:</h3>' +
-        '<h3 style="text-align:center;">Door reliability:</h3>' +
+        '<h3 style="text-align:center;">Door probability:</h3>' +
         '<div style="' + neg_alert + ' display:flex; justify-content:center; flex-direction:' + neg_flex + ';">' + neg_html + '</div>' +
         '<div style="height:45%; width:80%; display:flex; align-items:center; flex-direction:column; margin:auto; justify-content:space-evenly; ' + prob_alert + '">' +
         '<div id="door-1-prob-text" style="margin: 7% 0 7% 0;"><p style="text-align:center; margin:10px;"><big>Door 1: ' + Math.round(trial.open_prob[0] * 100) + '%</big></p>' +
@@ -304,7 +304,7 @@ jsPsych.plugins["test-choice"] = (function() {
       if (trial.choice == "free") {
         html += '<p id="prompt" style="text-align:center;">' + prompt + '</p><p style="text-align:center;">(Before you make your choice, think about whether you are more likely to get more points by going through the Airlock or going to the Supply Room)</p></div>';
       } else {
-        html += '<p id="prompt" style="text-align:center;">' + prompt + '</p><p style="text-align:center;">(Practice working out how many points you would get from Door 1 vs. Door 2 before responding)</p></div>';
+        html += '<p id="prompt" style="text-align:center;">' + prompt + '</p><p style="text-align:center;">(Practice calculating how many points you would get from Door 1 vs. Door 2)</p></div>';
       }
     } else {
       html += '<p id="prompt" style="text-align:center;">' + prompt + '</p></div>';
