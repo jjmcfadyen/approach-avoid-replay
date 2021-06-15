@@ -12,7 +12,7 @@ scriptdir = '~/Scratch/2020_RiskyReplay/scripts';
 dir_batch = 'D:\2020_RiskyReplay\approach-avoid-replay\preprocessing\batch';
 
 % Job settings
-timechar = '2:30:00'; % max job duration (hours : minutes : seconds)
+timechar = '2:00:00'; % max job duration (hours : minutes : seconds)
 functionName = 'cluster_preprocess'; % the function that will be called on the cluster
 RAM = '5G'; % RAM allocated to each job
 

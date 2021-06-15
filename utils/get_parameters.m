@@ -47,4 +47,11 @@ for s = 1:N
     
 end
 
+% remove practice blocks for 018768 & 957849 (photodiode missing)
+parameters((strcmp(parameters.schar,'018768') | strcmp(parameters.schar,'957849')) & ...
+    strcmp(parameters.task,'task') & parameters.block==0,:) = [];
+
+% remove block 9 for 391883 (photodiode signal lost)
+parameters(strcmp(parameters.schar,'391883') & strcmp(parameters.task,'task') & parameters.block==9,:) = [];
+
 end
