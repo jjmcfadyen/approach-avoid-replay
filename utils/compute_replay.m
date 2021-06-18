@@ -25,15 +25,23 @@ parfor trl = 1:nTrls
    
     disp(['Computing replay for trial ' num2str(trl) ' of ' num2str(nTrls) '...'])
     
+    C = classifier;
+    
     % Scale data
     X = data.trial{trl}'; % channels x samples
     X = X ./ prctile(abs(X(:)),95);
     
+    if any(isnan(X(:)))
+        idx = ~any(isnan(X));
+        X = X(:,idx);
+        C.betas = C.betas(:,idx);
+    end
+
     nSamples = size(X,1);
     
     % Apply classifier to get predicted data
 %     Y = 1 ./ (1 + exp(-(X*classifier.betas' + repmat(classifier.intercepts', [size(X,1) 1]))));
-    Y = X*classifier.betas';
+    Y = X*C.betas';
     
     thisreplay = [];
     for perm = 1:nPerms
@@ -95,5 +103,7 @@ parfor trl = 1:nTrls
     sequenceness(trl,:,:,:,:) = thisreplay;
     
 end
+
+disp('Finished!')
 
 end

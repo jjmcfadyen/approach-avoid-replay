@@ -3,7 +3,12 @@ function classifier = build_classifier(filename)
 % do_build creates the classifier (true or false)
 % do_test does the cross-validation (true or false)
 
-load(filename); % loads 'X' and 'Y' variables
+X = [];
+Y = [];
+
+tmp = load(filename); % loads 'X' and 'Y' variables
+X = tmp.X;
+Y = tmp.Y;
 
 classifier = [];
 
@@ -28,12 +33,14 @@ nChan = size(X,2);
 
 %% Build classifier
 
-disp('Building classifier...')
+fprintf('\nBuilding classifier...')
 
 betas = nan(nStates,nChan,nLambda);
 intercepts = nan(nStates,nLambda);
-for st = 1:nStates
+parfor st = 1:nStates
 
+    fprintf([' state ' num2str(st) ' of ' num2str(nStates) '... '])
+    
     y = Y == states(st); % binarise labels
 
     warning('off','all')

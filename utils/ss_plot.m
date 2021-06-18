@@ -1,4 +1,4 @@
-function ss_plot(d,opts)
+function [output] = ss_plot(d,opts)
 
 % d = trials/subjects x perms x lags
 gNames = {'Forward','Backward','Forward-Backward'};
@@ -60,7 +60,11 @@ if ~isfield(opts,'twosided')
     opts.twosided = false;
 end
 
-%% Plot
+if ~isfield(opts,'makeplot')
+    opts.makeplot = true;
+end
+
+%% Get traces
 
 % Calculate sequenceness mean
 y = squeeze(d(:,1,:)); % get first (main) permutation
@@ -77,14 +81,10 @@ if size(d,2) > 1
     np = unique(np,'rows');
 
     if g==3 || opts.twosided
-%         [~,idx] = max(max(abs(np),[],2));
-%         fprintf([ttext ': Best null permutation = #' num2str(idx+1) '\n'])
         abs_np = unique(round(abs(np),4),'rows');
         npThreshQuant = quantile(max(abs_np,[],2),.975);
         npThreshMax = max(abs(np));
     else
-%         [~,idx] = max(max(np,[],2));
-%         fprintf([ttext ': Best null permutation = #' num2str(idx+1) '\n'])
         npThreshQuant = quantile(max(np,[],2),.95);
         npThreshMax = max(np);
     end
@@ -104,6 +104,7 @@ if opts.subtractNull
             y(i,:) = y(i,:) - npiThresh;
         end
     end
+%     y = y - npThreshQuant;
     if g == 3 || opts.twosided
         m = abs(m) - npThreshQuant;
     else
@@ -113,61 +114,73 @@ if opts.subtractNull
     ll = m - sem;
 end
 
-% Show each null permutation (averaged across trials/subjects)
-if opts.nullPerms_overall && size(np,2) > 1
-    cmap = colours(size(np,1),'rainbow');
-    for perm = 1:size(np,1)
-        plot(x,np(perm,:),'color',cmap(perm,:),'linestyle','-'); hold on
+output = [];
+output.m = m;
+output.y = y;
+output.ul = ul;
+output.ll = ll;
+output.npThreshMax = npThreshMax;
+output.npThreshQuant = npThreshQuant;
+
+%% Plot
+
+if opts.makeplot
+    
+    % Show each null permutation (averaged across trials/subjects)
+    if opts.nullPerms_overall && size(np,2) > 1
+        cmap = colours(size(np,1),'rainbow');
+        for perm = 1:size(np,1)
+            plot(x,np(perm,:),'color',cmap(perm,:),'linestyle','-'); hold on
+        end
     end
-end
 
-% Plot average sequenceness
-if opts.showOverall
-    if opts.showError
-        patch([x fliplr(x)],[ul fliplr(ll)],avCol,'facealpha',.2,'edgealpha',0,'handlevisibility','off'); hold on
+    % Plot average sequenceness
+    if opts.showOverall
+        if opts.showError
+            patch([x fliplr(x)],[ul fliplr(ll)],avCol,'facealpha',.2,'edgealpha',0,'handlevisibility','off'); hold on
+        end
+        plot(x,m,'Color',avCol,'linewidth',linewidth); hold on
     end
-    plot(x,m,'Color',avCol,'linewidth',linewidth); hold on
-end
 
-% Plot subject sequenceness
-if opts.showIndividual
-    for i = 1:size(y,1)
-        plot(x,y(i,:),'color',indCol(i,:),'linewidth',linewidth); hold on
+    % Plot subject sequenceness
+    if opts.showIndividual
+        for i = 1:size(y,1)
+            plot(x,y(i,:),'color',indCol(i,:),'linewidth',linewidth); hold on
+        end
     end
-end
 
-% Plot subject's maximum null permutation
-if opts.nullPerms_individual
-    for i = 1:size(d,1)
-        snp = squeeze(d(i,:,:));
-        [mn,idx] = max(max(snp,[],2));
-        plot(x,snp(idx,:),'color',indCol(i,:),'linewidth',.8*linewidth,'linestyle','--'); hold on
+    % Plot subject's maximum null permutation
+    if opts.nullPerms_individual
+        for i = 1:size(d,1)
+            snp = squeeze(d(i,:,:));
+            [mn,idx] = max(max(snp,[],2));
+            plot(x,snp(idx,:),'color',indCol(i,:),'linewidth',.8*linewidth,'linestyle','--'); hold on
+        end
     end
-end
 
-% Plot null threshold max
-if opts.nullThresh && ~opts.subtractNull
-    plot(x([1 end]),[npThreshQuant npThreshQuant],'Color',avCol,'linestyle','--','handlevisibility','off'); hold on
-    if g==3 || opts.twosided
-        plot(x([1 end]),-[npThreshQuant npThreshQuant],'Color',avCol,'linestyle','--','handlevisibility','off'); hold on
+    % Plot null threshold max
+    if opts.nullThresh && ~opts.subtractNull
+        plot(x([1 end]),[npThreshQuant npThreshQuant],'Color',avCol,'linestyle','--','handlevisibility','off'); hold on
+        if g==3 || opts.twosided
+            plot(x([1 end]),-[npThreshQuant npThreshQuant],'Color',avCol,'linestyle','--','handlevisibility','off'); hold on
+        end
     end
-end
 
-% Plot moving null threshold
-if opts.nullMoving && ~opts.subtractNull
-    plot(x,npThreshMax,'Color',avCol,'linestyle',':','handlevisibility','off'); hold on
-    if g==3 || opts.twosided
-        plot(x,-npThreshMax,'Color',avCol,'linestyle',':','handlevisibility','off'); hold on
+    % Plot moving null threshold
+    if opts.nullMoving && ~opts.subtractNull
+        plot(x,npThreshMax,'Color',avCol,'linestyle',':','handlevisibility','off'); hold on
+        if g==3 || opts.twosided
+            plot(x,-npThreshMax,'Color',avCol,'linestyle',':','handlevisibility','off'); hold on
+        end
     end
+
+    % Plot zero line
+    plot(x([1 end]),[0 0],'k:','handlevisibility','off'); hold on
+
+    % Tidy up axes
+    title(gNames{g})
+    set(gca,'ticklength',[0 0])
+    xlabel('Lags (ms)')
+    ylabel('Sequenceness')
 end
-
-% Plot zero line
-plot(x([1 end]),[0 0],'k:','handlevisibility','off'); hold on
-
-% Tidy up axes
-title(gNames{g})
-set(gca,'ticklength',[0 0])
-xlabel('Lags (ms)')
-ylabel('Sequenceness')
-
 end

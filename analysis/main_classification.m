@@ -186,4 +186,22 @@ xlabel('Training Time (ms)')
 ylabel('Classification Accuracy')
 title('Classification Accuracy per Subject')
 
-% Plot by state/image
+%% Move files
+
+% for s = 1:N
+% 
+%     dir_save = fullfile(dir_meg,'classifiers',subjects{s});
+%     if ~exist(dir_save)
+%         mkdir(dir_save)
+%     end
+%     
+%     filelist = dir(fullfile(dir_batch,subjects{s},'*.mat'));
+%     for f = 1:length(filelist)
+%         movefile(fullfile(filelist(f).folder,filelist(f).name),...
+%                  fullfile(dir_save,filelist(f).name));
+%     end
+%     
+% %     rmdir(fullfile(dir_batch,subjects{s}));
+%     
+% end
+
