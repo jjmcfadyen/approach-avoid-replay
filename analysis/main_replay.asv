@@ -36,7 +36,6 @@ thisnull = 1; % proportion of data to replicate as null (zeros)
 nStates = 6;
 
 % Optimisation parameters
-top_percentile = .2; % after sorting the classifiers by accuracy, within which top percentile to optimise for sequenceness?
 group_best_time = 120; % from group average cross-validation accuracy
 
 % Sequenceness parameters
@@ -63,41 +62,41 @@ for s = 1:N
         lambdas(s,t) = best_lambda;
 
         % Get minimum accuracy across all 6 states
-        CV(s,t) = min(cv(:,best_lambda)); 
+        CV(s,t,1) = min(cv(:,best_lambda)); 
+        CV(s,t,2) = mean(cv(:,best_lambda)); 
+        CV(s,t,3) = max(cv(:,best_lambda)); 
         
     end
 end
 
 %% Compute minimum classification accuracy for moving on to replay
 
-q_threshold = .95; % get the top 5% of classification accuracies per participant
-while true
-    cv_threshold = min(quantile(CV',q_threshold));
-    if any(sum(CV > cv_threshold)==N) % stop once all subjects have above-threshold accuracy for one training time
-        break
-    else
-        q_threshold = q_threshold - .05;
-    end
-end
+[~,sortidx] = sort(max(CV(:,:,2),[],2),'descend');
 
 figure
 
 subplot(1,2,1)
-imagesc(CV)
-caxis([(1/6) .6])
-colormap([0 0 0; colours(99,'plasma')])
+imagesc(squeeze(CV(sortidx,:,2)))
+caxis([(1/6) .7])
+colormap([0 0 0; colours(99,'inferno')])
 colorbar
-title('Cross-Validated Accuracy (Minimum per State)')
-xlabel('Classifier Training Time')
+title('Mean Cross-Validated Accuracy (per State)')
+xlabel('Classifier Training Time (ms)')
 ylabel('Subjects')
+set(gca,'XTick',[1:5:length(trainTimes)]);
+set(gca,'XTickLabels',strsplit(num2str(trainTimes([1:5:length(trainTimes)]))));
 
 subplot(1,2,2)
-plot(trainTimes,min(CV)); hold on
-plot(trainTimes,mean(CV)); hold on
-plot(trainTimes,max(CV)); hold on
+plot(trainTimes,min(squeeze(CV(:,:,1)))); hold on
+plot(trainTimes,mean(squeeze(CV(:,:,2)))); hold on
+plot(trainTimes,max(squeeze(CV(:,:,3)))); hold on
 plot(trainTimes([1 end]),repmat(1/6,2,1),'k:'); hold on
-legend({'min','mean','max','chance'})
-title('Cross-Validated Accuracy (Minimum per State)')
+title('Cross-Validated Accuracy (per State)')
+
+[~,bestTime] = max(mean(squeeze(CV(:,:,2))),[],2); % find the training time with the highest MINIMUM state accuracy, on average across subjects
+ax = gca;
+plot(repmat(trainTimes(bestTime),2,1),ax.YLim,'k--');
+legend({'min','mean','max','chance','best time'})
 
 %% Generate sequenceness for all classifier training times
 
@@ -118,8 +117,7 @@ for s = 1:N
     end
 
     % Get replay for each classifier training time
-    thesetimes = trainTimes(CV(s,:) > cv_threshold);
-    thesetimes = setdiff(trainTimes(9:end),thesetimes);
+    thesetimes = 110:10:140;
     for t = 1:length(thesetimes)
        
 %         % Create job for cluster
@@ -131,11 +129,12 @@ for s = 1:N
         
         tic
         
-        % build & save classifier
-        filename = fullfile(dir_classifiers,subjects{s},['data_' subjects{s} '_t' num2str(thesetimes(t)) '_n' num2str(thisnull) '.mat']);
-        classifier = build_classifier(filename);
-        save(fullfile(dir_classifiers,subjects{s},['classifier_' subjects{s} '_t' num2str(thesetimes(t)) '_n' num2str(thisnull) '.mat']),'classifier');
-        
+%         % build & save classifier
+%         filename = fullfile(dir_classifiers,subjects{s},['data_' subjects{s} '_t' num2str(thesetimes(t)) '_n' num2str(thisnull) '.mat']);
+%         classifier = build_classifier(filename);
+%         save(fullfile(dir_classifiers,subjects{s},['classifier_' subjects{s} '_t' num2str(thesetimes(t)) '_n' num2str(thisnull) '.mat']),'classifier');
+        load(fullfile(dir_classifiers,subjects{s},['classifier_' subjects{s} '_t' num2str(thesetimes(t)) '_n' num2str(thisnull) '.mat']));
+
         % get replay using best lambdas from classifier & save
         thislambda = lambdas(s,trainTimes==thesetimes(t));
         classifier.betas = squeeze(classifier.betas(:,:,thislambda));
@@ -152,17 +151,15 @@ end
 % We want the largest peak, while also minimising autocorrelation
 
 % Settings
-excludeSubjects = {'396430'}; % bad classification
-thesesubjects = find(~ismember(subjects,excludeSubjects));
-thisN = length(thesesubjects);  
-
-thisCV = CV(thesesubjects,:);
-criteria_seqType = 'either'; % 'either' forwards or backwards, or the 'diff' fwd-bwd measure
-thesetimes = trainTimes(min(thisCV) == max(min(thisCV))); % restrict the classifiers to be optimised per participant
+criteria_seqType = 'diff'; % 'either' forwards or backwards, or the 'diff' fwd-bwd measure
+thesetimes = trainTimes(mean(squeeze(CV(:,:,2)))==max(mean(squeeze(CV(:,:,2))))); % find best classifier training time on average
 thesetimes = [thesetimes-10 thesetimes thesetimes+10]; % look 10 ms either side
+% [~,thesetimes] = max(min(squeeze(CV(:,:,1))));
+% thesetimes = trainTimes(thesetimes);
+% thesetimes = 130;
 
 removeForced = true;
-makeplots = true;
+makeplots = false;
 
 % Optimise/select
 optimised_times = nan(N,1); % optimal training times
@@ -171,12 +168,16 @@ trialcount = nan(N,1);
 for s = 1:N
    
     % check that the classifier is reliable for the selected training times
-    thisT = thesetimes(CV(s,ismember(trainTimes,thesetimes)) > (1/6));
+    if length(thesetimes) > 1
+        thisT = thesetimes(CV(s,ismember(trainTimes,thesetimes),1) > (1/6));
+    else
+        thisT = thesetimes;
+    end
     
     if length(thesetimes) > 1
         disp(['Optimising ' num2str(thisT) ' for ' subjects{s} '...'])
     else
-        disp(['Getting average replay for ' subjects{s} '...'])
+        disp(['Getting replay for ' subjects{s} '...'])
     end
     
     % Get replay for each classifier training time   
@@ -271,13 +272,13 @@ if length(thesetimes) > 1
 end
 
 % Plot group average, optimised training time
-excludeSubjects = {'396430'}; % bad classification
+excludeSubjects = {}; %{'396430'}; % bad classification
 thesesubjects = find(~ismember(subjects,excludeSubjects));
 thisN = length(thesesubjects);  
 
 figure;
 cc = 0;
-for g = [3 1 2]
+for g = 1:3
     cc = cc+1;
     subplot(1,3,cc)
     opts = [];
@@ -297,14 +298,50 @@ if length(thesetimes) > 1
     title(['Optimised replay across ' num2str(thesetimes) ' ms'])
 end
 
+%% Plot example of replay heatmap
+
+% Pick a subject
+s = 1;
+T = 120;
+maxLag = 60;
+
+% Get task data
+load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
+data = merged;
+clear merged
+
+% Get classifier
+load(fullfile(dir_classifiers,subjects{s},['classifier_' subjects{s} '_t' num2str(optimised_times(s,1)) '_n' num2str(thisnull) '.mat']));
+L = lambdas(s,trainTimes==optimised_times(s,1));
+B = classifier.betas(:,:,L)';
+I = classifier.intercepts(:,L)';
+
+% Find trial with best replay
+load(fullfile(dir_replay,subjects{s},['replay_' subjects{s} '_t' num2str(T) '_n' num2str(thisnull) '.mat']));
+[~,trls] = sort(squeeze(sum(replay(:,1,3,:,maxLag),4)));
+
+% Get predicted data
+trl = trls(end-5);
+d = data.trial{trl}';
+pred = d*B; %normr(1 ./ (1 + exp(-(d*B + repmat(I, [size(d,1) 1]))))); 
+for st = 1:6
+    pred(:,st) = smooth(pred(:,st),3);
+end
+figure; 
+% set(gcf,'position',[4 378 1914 420])
+imagesc(pred'); colormap(colours(100,'inferno'))
+% caxis([1/6 max(caxis)])
+xlim([0 0.4]*100)
+set(gca,'ticklength',[0 0])
+
 %% Extract the path-specific replay and put in data table
 
-excludeSubjects = {'396430','263098','680913'}; % bad classification (1), bad performance (rest)
+excludeSubjects = {'263098','680913'}; %{'396430','263098','680913'}; % bad classification (1), bad performance (rest)
 thesesubjects = find(~ismember(subjects,excludeSubjects));
 thisN = length(thesesubjects);  
 
-X = cell(1,N); % replay data
-Y = cell(1,N); % behavioural data
+X = cell(1,thisN); % replay data
+Y = cell(1,thisN); % behavioural data
 for s = 1:thisN
     
     S = thesesubjects(s);
@@ -312,7 +349,7 @@ for s = 1:thisN
     
     %% Get data
     % Get replay for optimised classifier training time
-    load(fullfile(dir_replay,subjects{S},['replay_' subjects{S} '_t' num2str(optimised_times(s)) '_n' num2str(thisnull) '.mat']));
+    load(fullfile(dir_replay,subjects{S},['replay_' subjects{S} '_t' num2str(optimised_times(S)) '_n' num2str(thisnull) '.mat']));
     
     % match up the replay data to the behavioural data
     load(fullfile(dir_behav,subjects{S},[subjects{S} '_parsedBehav.mat']))
@@ -407,28 +444,39 @@ cmap = [0, 238, 144
 
 % Group average                            
 pdata = [];
+alloutliers = nan(thisN,1); % percentage of trials where block accuracy was < 60%
 for s = 1:thisN
     
     B = Y{s};
+    R = X{s};
+    
+    % remove forced-choice trials
+    ridx = B.Forced==0;
+    B = B(ridx,:);
+    R = R(ridx,:,:,:,:);
     
     % remove blocks with poor accuracy
     outliers = zeros(size(B,1),1);
 
-    blocks = unique([B.Practice B.Block],'rows');
-    B.block_acc = nan(size(B,1),1);
-    for b = 1:size(blocks,1)
-        bidx = B.Practice==blocks(b,1) & B.Block==blocks(b,2);
-        B.block_acc(bidx) = mean(B.Acc(bidx));
-    end
-
-    outliers(B.block_acc < .6) = 1;
+%     blocks = unique([B.Practice B.Block],'rows');
+%     B.block_acc = nan(size(B,1),1);
+%     for b = 1:size(blocks,1)
+%         bidx = B.Practice==blocks(b,1) & B.Block==blocks(b,2);
+%         B.block_acc(bidx) = mean(B.Acc(bidx));
+%     end
+% 
+%     outliers(B.block_acc < .55) = 1;
+%     alloutliers(s,:) = mean(outliers);
+%     if any(outliers)
+%         disp(['Removing ' num2str(round(mean(outliers)*100,2)) '% trials with poor block accuracy'])
+%     end
     
     for c = 1:2 % choice
-        idx = B.Forced==0 & B.Choice==c & ~outliers;
+        idx = B.Choice==c & ~outliers;
         if strcmp(pathDefinition,'pos-neg')
             idx = idx & sum([B.nV_1 B.nV_2] > 1,2) == 1;
         end
-        pdata(s,c,:,:,:,:) = squeeze(mean(X{s}(idx,:,:,:,:))); % average over forced trials
+        pdata(s,c,:,:,:,:) = squeeze(mean(R(idx,:,:,:,:))); % average over forced trials
     end
 end
 
@@ -453,11 +501,10 @@ end
 
 arrangeLags = 'all'; % 'all', 'average', or 'max'
 subtractNull = false;
-g = 3;
-block_acc_threshold = .55; % need to have at least this accuracy in the block
+block_acc_threshold = 0; % need to have at least this accuracy in the block
 
 % Get replay
-replay_window = 1:7; % lags to include
+replay_window = 2:9; % lags to include
 lags = 10:10:600; % in ms
 
 T = [];
@@ -472,50 +519,63 @@ for s = 1:thisN
     
     B = Y{s}(idx,:);
     
-    % get differential replay (rewarding - aversive)
-    if subtractNull
-        d = [];
-        for i = 1:2
-            opts = [];
-            opts.subtractNull = true;
-            opts.g = 3;
-            tmp = ss_plot(squeeze(X{s}(idx,i,:,g,:)),opts);
-            d(:,i,:) = tmp.y;
+    % get replay
+    for g = 1:3
+        if subtractNull
+            d = [];
+            for i = 1:2
+                opts = [];
+                opts.subtractNull = true;
+                opts.g = 3;
+                tmp = ss_plot(squeeze(X{s}(idx,i,:,g,:)),opts);
+                d(:,i,:) = tmp.y;
+            end
+            d = tmp.y;
+        else
+            d = squeeze(X{s}(idx,:,1,g,replay_window)); % get just this subject at the specific lags
         end
-        d = tmp.y;
-    else
-        d = squeeze(X{s}(idx,:,1,g,replay_window)); % get just this subject at the specific lags
+    
+        switch arrangeLags
+            case 'all'
+                d = squeeze(d(:,1,:)-d(:,2,:));
+            case 'average'
+                d = mean(d,3);
+                d = squeeze(d(:,1)-d(:,2));
+            case 'max'
+                d = max(d,[],3);
+                d = squeeze(d(:,1)-d(:,2));
+        end
+       
+        if g==1
+            d_rewarding = d;
+        elseif g==2
+            d_aversive = d;
+        elseif g==3
+            d_differential = d;
+        end
+        
     end
     
-    switch arrangeLags
-        case 'all'
-            d = squeeze(d(:,1,:)-d(:,2,:));
-        case 'average'
-            d = mean(d,3);
-            d = squeeze(d(:,1)-d(:,2));
-        case 'max'
-            d = max(d,[],3);
-            d = squeeze(d(:,1)-d(:,2));
-    end
+%     % remove outliers
+%     outliers = abs(zscore(mean(d,2))) > 3;
+    outliers = zeros(size(d,1),1);
     
-    % remove outliers
-    outliers = abs(zscore(mean(d,2))) > 3;
-    
-    % remove blocks with poor accuracy
-    blocks = unique([B.Practice B.Block],'rows');
-    B.block_acc = nan(size(B,1),1);
-    for b = 1:size(blocks,1)
-        bidx = B.Practice==blocks(b,1) & B.Block==blocks(b,2);
-        B.block_acc(bidx) = mean(B.Acc(bidx));
-    end
-    outliers(B.block_acc < block_acc_threshold) = 1;
-    
-    if any(outliers)
-        disp(['(removing ' num2str(sum(outliers)) ' outliers)'])
-    end
-    
-    d = d(~outliers,:);
-    B = B(~outliers,:);
+%     % remove blocks with poor accuracy
+%     blocks = unique([B.Practice B.Block],'rows');
+%     B.block_acc = nan(size(B,1),1);
+%     for b = 1:size(blocks,1)
+%         bidx = B.Practice==blocks(b,1) & B.Block==blocks(b,2);
+%         B.block_acc(bidx) = mean(B.Acc(bidx));
+%     end
+%     outliers(B.block_acc < block_acc_threshold) = 1;
+%     
+%     disp(['Accuracy = ' num2str(round(mean(B.Acc)*100,2)) '%'])
+%     if any(outliers)
+%         disp(['(removing ' num2str(sum(outliers)) ' outliers)'])
+%     end
+%     
+%     d = d(~outliers,:);
+%     B = B(~outliers,:);
     
     lmetrialcount(s,1) = size(B,1);
     
@@ -525,7 +585,9 @@ for s = 1:thisN
     for t = 1:size(d,2)
         tmp = B;
         tmp.Lag = repmat(lags(replay_window(t)),n,1);
-        tmp.Replay = d(:,t);
+        tmp.Replay_rewarding = d_rewarding(:,t);
+        tmp.Replay_aversive = d_aversive(:,t);
+        tmp.Replay_differential = d_differential(:,t);
         if t==1
             thistable = tmp;
         else
@@ -541,22 +603,15 @@ end
 
 % Recode variables
 T.Choice = T.Choice+10;
-T.Choice(T.Choice==11) = 1;
-T.Choice(T.Choice==12) = 0;
+T.Choice(T.Choice==11) = 1; % approach
+T.Choice(T.Choice==12) = 0; % avoid
 % T.Choice = categorical(T.Choice,[1 0],{'approach','avoid'});
 
 T.Acc = categorical(T.Acc,[0 1],{'incorrect','correct'});
 T.Subject = categorical(T.Subject,unique(T.Subject),unique(T.Subject));
 
 % Factors that predict choice
-glme = fitglme(T,'Choice~Replay+(Replay|Subject:Lag)','distribution','binomial')
+glme = fitglme(T,'Choice~Replay+(1|Subject:Lag)','distribution','binomial')
 
-uLag = unique(T.Lag);
-uReplay = [min(T.Replay):.1:max(T.Replay)];
-uSubject = unique(T.Subject);
-
-pdata = [];
-pdata.Subject = sort(repmat(subjects(thesesubjects),length(uLag)*length(uReplay),1));
-pdata.Lag = repmat(sort(repmat(uLag,length(uReplay),1)),length(uSubject),1);
-pdata.Replay = repmat(uReplay,length(uSubject)*length(uLag),1);
-pdata = struct2table(pdata);
+% Save
+writetable(T,'D:\2020_RiskyReplay\results\replay\replay_lme.csv');

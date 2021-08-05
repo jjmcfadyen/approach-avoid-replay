@@ -12,6 +12,8 @@ dir_raw = 'D:\2020_RiskyReplay\data\meg\raw';
 dir_meg = 'D:\2020_RiskyReplay\data\meg';
 dir_behav = 'D:\2020_RiskyReplay\data\behav';
 
+cd D:\2020_RiskyReplay\approach-avoid-replay
+
 %% Parameters
 
 addpath('utils');
@@ -127,12 +129,12 @@ for s = 1:N
         save(fullfile(thisoutput,...
             ['triggers_' subjects{s} '_' thistask '_r' num2str(thisblock) '.mat']),'triggers');
         
-    end   
+    end
 end
 
 %% Visually validate the EOG channels
 
-loadEOG = true; % if EOG channels have already been saved, load them instead
+loadEOG = false; % if EOG channels have already been saved, load them instead
 
 if ~loadEOG
     figure
@@ -208,8 +210,8 @@ cfg.method = 'template';
 cfg.layout = 'CTF275.lay';
 neighbours = ft_prepare_neighbours(cfg);
 
-for ds = 2%:length(Fs)
-    for s = 5:N
+for ds = 1:length(Fs)
+    for s = 24%1:N
 
         %% Epoch
         dir_output = fullfile(dir_meg,['6_epoched_ds-' num2str(Fs(ds)) 'Hz'],subjects{s});
@@ -370,35 +372,35 @@ for ds = 2%:length(Fs)
             
         end
         
-%         % plot
-%         tasks = {'FL','task','response'};
-%         for t = 1:length(tasks)    
-% 
-%              load(fullfile(dir_output,[subjects{s} '_' tasks{t} '_' num2str(Fs(ds)) 'Hz.mat']); % loads 'merged' variable
-%             
-%             if t==1
-%                 uCon = unique(merged.trialinfo);
-%                 pdata = cell(1,length(uCon));
-%                 for c = 1:length(uCon)
-%                     cfg = [];
-%                     cfg.trials = find(merged.trialinfo==uCon(c));
-%                     pdata{c} = ft_timelockanalysis(cfg,merged);
-%                 end
-%             else
-%                 pdata = {ft_timelockanalysis([],merged)};
-%             end
-% 
-%             figure
-%             cfg = [];
-%             cfg.layout = 'CTF275.lay';
-%             cfg.parameter = 'avg';
-%             if t==1
-%                 cfg.linecolor = colours(length(uCon),'viridis');
-%             end
-%             ft_multiplotER(cfg,pdata{:})
-%             sgtitle(tasks{t})
-%             
-%         end
+        % plot
+        tasks = {'FL','task','response'};
+        for t = 1:length(tasks)    
+
+             load(fullfile(dir_output,[subjects{s} '_' tasks{t} '_' num2str(Fs(ds)) 'Hz.mat'])); % loads 'merged' variable
+            
+            if t==1
+                uCon = unique(merged.trialinfo);
+                pdata = cell(1,length(uCon));
+                for c = 1:length(uCon)
+                    cfg = [];
+                    cfg.trials = find(merged.trialinfo==uCon(c));
+                    pdata{c} = ft_timelockanalysis(cfg,merged);
+                end
+            else
+                pdata = {ft_timelockanalysis([],merged)};
+            end
+
+            figure
+            cfg = [];
+            cfg.layout = 'CTF275.lay';
+            cfg.parameter = 'avg';
+            if t==1
+                cfg.linecolor = colours(length(uCon),'viridis');
+            end
+            ft_multiplotER(cfg,pdata{:})
+            sgtitle(tasks{t})
+            
+        end
     end
 end
 

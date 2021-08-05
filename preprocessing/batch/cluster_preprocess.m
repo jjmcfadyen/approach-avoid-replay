@@ -22,91 +22,91 @@ Fs = [100 600]; % downsampling rate (in Hz)
 
 %% Filter
     
-% % file setup
-% thisdir = fullfile(dir_data,'2_cropped',subject);
-% dir_opts = fullfile(thisdir,['opts_' task '_r' num2str(run)]);
-% 
-% opts                    = [];
-% opts.datatype           = 'ctf';
-% opts.spm_files          = {fullfile(thisdir,filename)};
-% opts.dirname            = dir_opts;
-% 
-% % filter
-% opts.highpass.do        = 1;
-% opts.highpass.cutoff    = 0.5;
-% opts.mains.do           = 1;
-% 
-% % switch off other settings
-% opts.downsample.do      = 0;
-% opts.bad_segments.do    = 0;
-% opts.africa.do          = 0;
-% opts.outliers.do        = 0;
-% opts.coreg.do           = 0;
-% opts.epoch.do           = 0;
-% 
-% % run
-% opts = osl_run_opt(opts); % creates new folder, same as dir_output but with '.opt' appended
-% 
-% disp(['=================================================================='])
-% disp(['=== FILE SAVE LOCATION: ' opts.results.spm_files{1} ' ==='])
-% disp(['=================================================================='])
-% 
-% % movefile
-% dir_output = fullfile(dir_data,'3_filtered',subject);
-% if ~exist(dir_output)
-%     mkdir(dir_output)
-% end
-% 
-% D = spm_eeg_load(opts.results.spm_files{1});
-% D.move(fullfile(dir_output,['filtered_' subject '_' task '_r' num2str(run)]));
-% 
-% rmdir(dir_opts,'s')
+% file setup
+thisdir = fullfile(dir_data,'2_cropped',subject);
+dir_opts = fullfile(thisdir,['opts_' task '_r' num2str(run)]);
+
+opts                    = [];
+opts.datatype           = 'ctf';
+opts.spm_files          = {fullfile(thisdir,filename)};
+opts.dirname            = dir_opts;
+
+% filter
+opts.highpass.do        = 1;
+opts.highpass.cutoff    = 0.5;
+opts.mains.do           = 1;
+
+% switch off other settings
+opts.downsample.do      = 0;
+opts.bad_segments.do    = 0;
+opts.africa.do          = 0;
+opts.outliers.do        = 0;
+opts.coreg.do           = 0;
+opts.epoch.do           = 0;
+
+% run
+opts = osl_run_opt(opts); % creates new folder, same as dir_output but with '.opt' appended
+
+disp(['=================================================================='])
+disp(['=== FILE SAVE LOCATION: ' opts.results.spm_files{1} ' ==='])
+disp(['=================================================================='])
+
+% movefile
+dir_output = fullfile(dir_data,'3_filtered',subject);
+if ~exist(dir_output)
+    mkdir(dir_output)
+end
+
+D = spm_eeg_load(opts.results.spm_files{1});
+D.move(fullfile(dir_output,['filtered_' subject '_' task '_r' num2str(run)]));
+
+rmdir(dir_opts,'s')
 
 %% Downsample & detect bad segments
 
 for ds = 1:length(Fs)
     
-%     % file setup
-%     thisdir = fullfile(dir_data,'3_filtered',subject);
-%     dir_opts = fullfile(thisdir,['opts_' task '_r' num2str(run)]);
-% 
-%     opts                    = [];
-%     opts.datatype           = 'ctf';
-%     opts.spm_files          = {fullfile(thisdir,['filtered_' subject '_' task '_r' num2str(run)])};
-%     opts.dirname            = dir_opts;
-% 
-%     % downsampling
-%     opts.downsample.do      = 1;
-%     opts.downsample.freq    = Fs(ds);
-% 
-%     % bad segments
-%     opts.bad_segments.do    = 1;
-% 
-%     % switch off
-%     opts.africa.do          = 0;
-%     opts.epoch.do           = 0;
-%     opts.outliers.do        = 0;
-%     opts.coreg.do           = 0;
-%     opts.highpass.do        = 0;
-%     opts.mains.do           = 0;
-% 
-%     % run
-%     opts = osl_run_opt(opts);
-% 
-%     disp(['=================================================================='])
-%     disp(['=== FILE SAVE LOCATION: ' opts.results.spm_files{1} ' ==='])
-%     disp(['=================================================================='])
-% 
-%     % movefile
-%     dir_output = fullfile(dir_data,['4_downsampled_' num2str(Fs(ds)) 'Hz'],subject);
-%     if ~exist(dir_output)
-%         mkdir(dir_output)
-%     end
-% 
-%     D = spm_eeg_load(opts.results.spm_files{1});
-%     D.move(fullfile(dir_output,['ds-' num2str(Fs(ds)) 'Hz_' subject '_' task '_r' num2str(run)]));
-% 
-%     rmdir(dir_opts,'s')
+    % file setup
+    thisdir = fullfile(dir_data,'3_filtered',subject);
+    dir_opts = fullfile(thisdir,['opts_' task '_r' num2str(run)]);
+
+    opts                    = [];
+    opts.datatype           = 'ctf';
+    opts.spm_files          = {fullfile(thisdir,['filtered_' subject '_' task '_r' num2str(run)])};
+    opts.dirname            = dir_opts;
+
+    % downsampling
+    opts.downsample.do      = 1;
+    opts.downsample.freq    = Fs(ds);
+
+    % bad segments
+    opts.bad_segments.do    = 1;
+
+    % switch off
+    opts.africa.do          = 0;
+    opts.epoch.do           = 0;
+    opts.outliers.do        = 0;
+    opts.coreg.do           = 0;
+    opts.highpass.do        = 0;
+    opts.mains.do           = 0;
+
+    % run
+    opts = osl_run_opt(opts);
+
+    disp(['=================================================================='])
+    disp(['=== FILE SAVE LOCATION: ' opts.results.spm_files{1} ' ==='])
+    disp(['=================================================================='])
+
+    % movefile
+    dir_output = fullfile(dir_data,['4_downsampled_' num2str(Fs(ds)) 'Hz'],subject);
+    if ~exist(dir_output)
+        mkdir(dir_output)
+    end
+
+    D = spm_eeg_load(opts.results.spm_files{1});
+    D.move(fullfile(dir_output,['ds-' num2str(Fs(ds)) 'Hz_' subject '_' task '_r' num2str(run)]));
+
+    rmdir(dir_opts,'s')
 
     %% AFRICA
 

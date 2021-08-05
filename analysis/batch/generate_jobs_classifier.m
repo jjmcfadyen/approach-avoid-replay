@@ -13,8 +13,8 @@ batchdir = '/lustre/scratch/scratch/skgtjm6/2020_RiskyReplay/scripts/';
 dir_batch = 'D:\2020_RiskyReplay\approach-avoid-replay\analysis\batch';
 
 % Job settings
-timechar = '0:30:00'; % max job duration (hours : minutes : seconds)
-functionName = 'build_classifier'; % the function that will be called on the cluster
+timechar = '2:30:00'; % max job duration (hours : minutes : seconds)
+functionName = 'crossvalidate_classifier'; % the function that will be called on the cluster
 RAM = '5G'; % RAM allocated to each job
 
 %% Read in jobs
@@ -35,7 +35,7 @@ F = template;
 % what to call copy of template
 fname = fullfile(dir_batch,subject,['job_' subject '_t' num2str(traintime) '_n' num2str(nulldata) '_classifier.sh']);
 jobname = ['s' subject '_t' num2str(traintime) '_n' num2str(nulldata) '_classifier'];
-argname = [batchdir,subject,'/',subject '_t' num2str(traintime) '_n' num2str(nulldata) '.mat'];
+argname = [batchdir,subject,'/data_',subject '_t' num2str(traintime) '_n' num2str(nulldata) '.mat'];
 
 for i = 1:length(template) % for each line...
 

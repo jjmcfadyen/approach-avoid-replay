@@ -12,6 +12,11 @@ catch
 end
 
 switch cName
+    case 'redblue'
+        cm = [255 0 0; 255 255 255; 39, 180, 255]/255;
+        cm = [[linspace(cm(1,1),cm(2,1),50)'; linspace(cm(2,1),cm(3,1),50)'],...
+              [linspace(cm(1,2),cm(2,2),50)'; linspace(cm(2,2),cm(3,2),50)'],...
+              [linspace(cm(1,3),cm(2,3),50)'; linspace(cm(2,3),cm(3,3),50)']];
     case 'viridis'
         cm = [[ 0.26700401,  0.00487433,  0.32941519],
        [ 0.26851048,  0.00960483,  0.33542652],

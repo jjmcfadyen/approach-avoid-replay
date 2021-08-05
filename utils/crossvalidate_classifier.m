@@ -1,4 +1,4 @@
-function cv = crossvalidate_classifier(filename)
+function [cv, avpred] = crossvalidate_classifier(filename)
 % Builds a classifier using data X and labels Y saved in 'filename'
 % do_build creates the classifier (true or false)
 % do_test does the cross-validation (true or false)
@@ -6,6 +6,7 @@ function cv = crossvalidate_classifier(filename)
 load(filename); % loads 'X' and 'Y' variables
 
 cv = [];
+avpred = [];
 
 %% Settings
 
@@ -19,7 +20,8 @@ pdf = 2 ./ (pi*gamma*(1 + (lWidth/gamma).^2)); % half-Cauchy distribution
 lambdas = sort(datasample(lWidth,nLambda,'weights',pdf,'replace',false));
 
 % Cross-validation
-nFolds = 7; % integer, or 'Inf' to do as many as possible (note that any leftover trials get put in an additional fold, so specify one less than desired)
+nFolds = Inf; % integer, or 'Inf' to do as many as possible (note that any leftover trials get put in an additional fold, so specify one less than desired)
+onlyOne = nFolds==Inf;
 
 %% Get info from data
 
@@ -79,6 +81,7 @@ fprintf([' ' num2str(length(foldlog)) ' folds \n'])
 % Cycle through folds
 nFolds = length(foldlog);
 cv = nan(nFolds,nStates,nLambda);
+avpred = nan(nFolds,nStates,nStates,nLambda);
 parfor fold = 1:nFolds
 
     disp(['------ fold ' num2str(fold) ' of ' num2str(nFolds) '...'])
@@ -99,6 +102,7 @@ parfor fold = 1:nFolds
 
     % Create classifiers using left-in data
     acc = zeros(length(thesestates),nLambda);
+    PRED = zeros(length(thesestates),length(thesestates),nLambda);
     for st = 1:length(thesestates)
 
         warning('off','all')
@@ -118,27 +122,49 @@ parfor fold = 1:nFolds
         [~,sortidx] = sort(pred,'descend');
         sorty = loY(sortidx);
 
-        % see what proportion of the highest predictions match the correct label
-        thissum = sum(loY==thesestates(st));
-        thisacc = mean(sorty(1:thissum,:)==thesestates(st));
+        if onlyOne
+            
+            % see whether the max accuracy is for this state
+            thisacc = sorty(1,:)==thesestates(st);
+            
+            % invalidate any instances where there is more than one max prediction
+            tmp = nan(1,size(pred,2));
+            for i = 1:size(tmp,2)
+                tmp(i) = sum(pred(:,i) == max(pred(:,i))) > 1;
+            end
+            
+            thisacc(tmp==1) = 0;
+            
+            % log prediction
+            thispred = pred;
+            
+        else
+            
+            % see what proportion of the highest predictions match the correct label
+            thissum = sum(loY==thesestates(st));
+            thisacc = mean(sorty(1:thissum,:)==thesestates(st));
 
-        % invalidate any instances where there is more than one max prediction
-        thismax = max(pred);
-        tmp = nan(size(pred,1),size(pred,2));
-        for i = 1:size(tmp,1)
-            tmp(i,:) = pred(i,:) == thismax;
+            % invalidate any instances where there is more than one max prediction
+            thismax = max(pred);
+            tmp = nan(size(pred,1),size(pred,2));
+            for i = 1:size(tmp,1)
+                tmp(i,:) = pred(i,:) == thismax;
+            end
+
+            thisacc(sum(tmp) > thissum) = 0;
+            
         end
-
-        thisacc(sum(tmp) > thissum) = 0;
 
         % store in variable
         acc(st,:) = thisacc;
+        PRED(st,:,:) = thispred;
 
     end
 
     tmpacc = squeeze(cv(fold,:,:));
     tmpacc(ismember(states,thesestates),:) = acc;
     cv(fold,:,:) = tmpacc;
+    avpred(fold,:,:,:) = PRED;
 
 end
 

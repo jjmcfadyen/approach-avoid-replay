@@ -40,7 +40,7 @@ parfor trl = 1:nTrls
     nSamples = size(X,1);
     
     % Apply classifier to get predicted data
-%     Y = 1 ./ (1 + exp(-(X*classifier.betas' + repmat(classifier.intercepts', [size(X,1) 1]))));
+%     Y = normr(1 ./ (1 + exp(-(X*C.betas' + repmat(C.intercepts', [size(X,1) 1])))));
     Y = X*C.betas';
     
     thisreplay = [];

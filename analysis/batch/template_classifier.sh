@@ -9,7 +9,7 @@
 #$ -l [RAM]
 
 # Request 10 gigabyte of TMPDIR space
-#$ -l tmpfs=10G
+#$ -l tmpfs=1G
 
 # Request a number of threads (which will use that number of cores).
 # On Myriad you can set the number of threads to a maximum of 36.
@@ -40,4 +40,4 @@ module load vtk/6.2.0/gnu-4.9.2
 module load fsl/6.0.0
 
 # These echoes output what you are about to run  --> FILLED IN BY MATLAB SCRIPT
-/usr/bin/time --verbose matlab -nosplash -nodesktop -nodisplay -r "cd('[SCRIPTDIR]'); [FUNCTION]('[ARGS]',false,true)"
+/usr/bin/time --verbose matlab -nosplash -nodesktop -nodisplay -r "cd('[SCRIPTDIR]'); [FUNCTION]('[ARGS]')"

@@ -6,7 +6,7 @@ for g = 1:3
     for t = 1:size(replay,1)
         opts = [];
         opts.makeplot = false;
-        opts.subtractNull = true;
+%         opts.subtractNull = true;
         opts.g = g;
         tmp = ss_plot(squeeze(replay(t,:,:,g,:)),opts);
         sigreplay(t,g,:) = tmp.m;
@@ -67,10 +67,13 @@ switch criteria_seqType
         criteria.peakLocDiff = abs(criteria.peakLocD - median(criteria.peakLocD));
 end
 
-criteria = criteria(:,[3 4]);
-bestCombination = [max(criteria.peakVal) min(criteria.startVal)];
-
-% Pick best match
-[~,best_traintime] = min(pdist2(table2array(criteria),bestCombination));
+% switch criteria_seqType
+%     case 'either'
+%         criteria = criteria(:,[3 4]);
+%         bestCombination = [max(criteria.peakVal) min(criteria.startVal)];
+%         [~,best_traintime] = min(pdist2(table2array(criteria),bestCombination));
+%     case 'diff'
+        [~,best_traintime] = max(criteria.peakVal);
+% end
 
 end

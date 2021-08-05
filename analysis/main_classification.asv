@@ -86,6 +86,13 @@ for s = 1:N
         
     end
     
+    % Match channels between FL and task
+    load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
+    task = merged;
+    clear merged
+    
+    chanidx = ismember(data.label,
+    
     % Log states
     cc = 0;
     for p = 1:2
@@ -150,14 +157,14 @@ for s = 1:N
 %             save(filename,'X','Y');
 %             
             % Build classifier & cross-validate
-            classifier = build_classifier(filename);
-            save(fullfile('D:\2020_RiskyReplay\data\meg\classifiers',subjects{s},...
-                ['classifier_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(nulldata(n)) '.mat']),'classifier');
+%             classifier = build_classifier(filename);
+%             save(fullfile('D:\2020_RiskyReplay\data\meg\classifiers',subjects{s},...
+%                 ['classifier_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(nulldata(n)) '.mat']),'classifier');
 %             crossvalidate_classifier(filename);
-% 
+
 %             % Create job for cluster
-%             generate_jobs_classifier(subjects{s},trainTimes(t),nulldata(n));
-%             
+            generate_jobs_classifier(subjects{s},trainTimes(t),nulldata(n));
+            
 %             toc
 
         end

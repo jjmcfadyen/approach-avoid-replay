@@ -1,6 +1,7 @@
 function [triggers,endtime] = parse_triggers(D,behav,task)
 
 subject = unique(behav.Subject);
+doChecks = true;
 
 %% Settings
 
@@ -16,33 +17,85 @@ pData = squeeze(D(find(contains(D.chanlabels,pLabel)),:,:));
 
 %% Get characteristics of data trace
 
+% Crop and normalise data between 0 and 1
 croptime = find(pData==0,1,'first')-1;
 disp(['Photodiode trace ends after ' num2str(round(D.time(croptime)/60,2)) ' minutes'])
 
-if ~strcmp(subject,'957849')
-    pData = detrend(pData(1:croptime),1);
-else
-    pData = pData(1:croptime);
-end
-baseline = median(pData); % most common value is the baseline amplitude
-thisdev = std(pData)/2; % with some fluctation
-
-if strcmp(subject,'663186') && strcmp(task,'task') && all(behav.Block==7)
-   thisdev =  std(pData)*1.5; % screen kicked, some blips arehigher amplitude
-elseif strcmp(subject,'957849') && strcmp(task,'FL') && all(behav.Block==1)
-   thisdev =  .001; % amplitude dims in last third of block?
+if strcmp(subject,'832746') && strcmp(task,'task') && all(behav.Practice==0) && all(behav.Block==1) % photodiode fell off midway through
+    croptime = 3.435e5;
+elseif strcmp(subject,'680913') && strcmp(task,'task') && all(behav.Practice==0) && all(behav.Block==10)
+    croptime = 3.393e5;
 end
 
-onsets = pData > baseline+thisdev;
+pData = normalise(pData(1:croptime),0,1);
+X = D.time(1:croptime);
+
+% Detrend the data, if it helps (sometimes the diode might slowly drift upwards)
+slidingwindow = D.fsample*90; % get median using 90-second sliding window
+
+movingmedian = movmedian(pData,slidingwindow);
+fit = polyfit(X,movingmedian,1);
+
+detrended = detrend(pData,1);
+dmedian = movmedian(detrended,slidingwindow);
+dfit = polyfit(X,dmedian,1);
+
+if abs(dfit(end)) < abs(fit(end)) % if detrending made the median value across time stay more constant (i.e., smaller slope), then use the detrended data
+    pData = detrended;
+    movingmedian = dmedian;
+end
+
+% Identify the onsets 
+baseline = movingmedian + std(pData)/2; % with some fluctation
+
+% if strcmp(subject,'663186') && strcmp(task,'task') && all(behav.Block==7)
+%    baseline = baseline + std(pData)*1.5; % screen kicked, some blips arehigher amplitude
+% elseif strcmp(subject,'957849') && strcmp(task,'FL') && all(behav.Block==1)
+%    baseline =  baseline + .001; % amplitude dims in last third of block?
+% end
+if strcmp(subject,'680913') && strcmp(task,'task') && all(behav.Practice==0) && all(behav.Block==10)
+   baseline = baseline + .1;
+end
+if strcmp(subject,'945092')
+    if strcmp(task,'FL')
+        if all(behav.Block==1)
+            baseline = baseline*2;
+        elseif all(behav.Block==4)
+            baseline(5.122e4:5.982e4) = 0.276;
+        end
+    else
+        if (all(behav.Block==1) && all(behav.Practice==1)) || (all(behav.Block==1) && all(behav.Practice==0))
+            baseline = baseline + 0.1;
+        elseif all(behav.Practice==0) && (all(behav.Block==5) || all(behav.Block==6) || all(behav.Block==7))
+            baseline = baseline + 0.1;
+        elseif all(behav.Practice==0) && all(behav.Block==8)
+            baseline(:) = 0.3384;
+        elseif all(behav.Practice==0) && all(behav.Block==9)
+            baseline(:) = 0.0914;
+            baseline(1:7.759e4) = 0.1946;
+        elseif all(behav.Practice==0) && all(behav.Block==10)
+            baseline = baseline+.2;
+        end
+    end
+end
 
 % Get onsets/offsets/durations
+if strcmp(subject,'832746') && strcmp(task,'task') && all(behav.Practice==0) && all(behav.Block==2) % no photodiode
+    pData = squeeze(D(D.indchannel('UPPT002'),1:croptime,:)); % need to use response buttons as a way of syncing the data
+    baseline = 0;
+end
+
+onsets = pData > baseline;
 triggers = [];
 thistrig = [];
 for i = 2:length(onsets)
-   
+
     if onsets(i)==1 && onsets(i-1)==0 % 0 to 1
         thistrig.sOnset = i;
         thistrig.tOnset = D.time(i);
+        if strcmp(subject,'832746') && strcmp(task,'task') && all(behav.Practice==0) && all(behav.Block==2) % no photodiode
+            thistrig.Value = pData(i);
+        end
     elseif onsets(i)==0 && onsets(i-1)==1 % 1 to 0
         thistrig.sOffset = i;
         thistrig.tOffset = D.time(i);
@@ -50,7 +103,7 @@ for i = 2:length(onsets)
         thistrig.tDur = thistrig.tOffset-thistrig.tOnset;
         triggers = [triggers; struct2table(thistrig)];
     end
-    
+
 end
 
 % Clean up any obvious errors
@@ -81,6 +134,29 @@ if strcmp(subject,'957849') && strcmp(task,'FL') && all(behav.Block==3)
     triggers(end+1,:) = array2table([21301 17.75 21421 17.85 102 .1],'variablenames',triggers.Properties.VariableNames);
     triggers(end+1,:) = array2table([22465 18.72 22813 19.01 296 .29],'variablenames',triggers.Properties.VariableNames);
     triggers = sortrows(triggers);
+end
+if strcmp(subject,'680913') && strcmp(task,'task') && all(behav.Practice==0) && all(behav.Block==10)
+    triggers(10:11,:) = []; 
+end
+if strcmp(subject,'945092')
+    if strcmp(task,'FL')
+        if all(behav.Block==1)
+            triggers(227:229,:) = []; 
+        elseif all(behav.Block==2)
+            triggers(triggers.sOnset==43145,:) = array2table([43145 43145/D.fsample 43145+114 (43145+114)/D.fsample 114 114/D.fsample],'variablenames',triggers.Properties.VariableNames);
+        elseif all(behav.Block==3)
+            triggers.sOffset(triggers.sOnset==321233) = 321833;
+            triggers.tOffset(triggers.sOnset==321233) = 321833/D.fsample;
+            triggers.sDur(triggers.sOnset==321233) = 600;
+            triggers.tDur(triggers.sOnset==321233) = 600/D.fsample;
+        end
+    else
+        if all(behav.Block==9)
+            triggers(triggers.sOnset==152720,:) = [];
+            triggers(triggers.sOnset==153859,:) = [];
+            triggers(triggers.sOnset==212585,:) = [];
+        end
+    end
 end
 
 %% Match to behavioural log
@@ -200,12 +276,59 @@ switch task
                 nTrigs = size(triggers,1);
             end
         end
+        if strcmp(subject,'832746') && strcmp(task,'task') && all(behav.Practice==0)
+            if all(behav.Block==1)
+                
+                % after trial 11 of block 1, the photodiode fell off
+                % can create artifical "triggers" based on the behavioural log
+                croptime = 478944; % set the crop time back to the actual end of block (rather than when the photodiode fell off)
+                
+                triggers = triggers(1:end-1,:);
+                fit = polyfit(behav.Timestamp(1:11),triggers.sOnset(round(triggers.tDur,1)==.1),1);
+                estimatedOnsets = round(polyval(fit,behav.Timestamp(12:end)));
+                
+                idx = size(triggers,1)+1:(size(triggers,1)+length(estimatedOnsets));
+                triggers.sOnset(idx) = estimatedOnsets;
+                triggers.tOnset(idx) = triggers.sOnset(idx)/D.fsample;
+                triggers.sOffset(idx) = NaN;
+                triggers.tOffset(idx) = NaN;
+                triggers.sDur(idx) = 0.1*D.fsample;
+                triggers.tDur(idx) = 0.1;
+                
+                triggers.tOffset(end) = triggers.tOnset(end) + behav.RT(end) + 5;
+                triggers.sOffset(end) = round(triggers.tOffset(end)*D.fsample);
+                
+                % no way of working out the transition onsets or image onsets, so don't bother checking these
+                doChecks = false;
+                nTrigs = size(triggers,1);
+                
+            elseif all(behav.Block==2) % no photodiode at all
+                
+                triggers([1:2 21:23],:) = []; % delete erroneous button presses
+                
+                triggers.tOffset = triggers.tOnset; % make the offset the response time
+                triggers.sOffset = triggers.sOnset;
+                
+                triggers.tOnset = triggers.tOnset - behav.RT; % subtract the response time to get the trial start
+                triggers.sOnset = round(triggers.tOnset * D.fsample);
+                
+                triggers.sDur(:) = 0.1*D.fsample;
+                triggers.tDur(:) = 0.1;
+                
+                triggers = removevars(triggers,'Value');
+                
+                % no way of working out the transition onsets or image onsets, so don't bother checking these
+                doChecks = false;
+                nTrigs = size(triggers,1);
+                
+            end
+        end
+        if strcmp(subject,'945092') && strcmp(task,'task') && all(behav.Practice==1)
+            % Participant asked question during trial 4, so we restarted the MEG scan to get trial 5 onwards
+            triggers(1:5,:) = []; % delete the stimulus presentations from trial 4
+        end
         
         % Work out how many triggers there should be, given behavioural log
-        startTrigs = size(behav,1); % this many trial starts
-        approachTrigs = sum(behav.Choice==1)*5; % 1 x transition, 3 x images, 1 x outcome
-        avoidTrigs = sum(behav.Choice==2); % 1 x onset
-        
         triggerOrder = round(triggers.tDur,1); % trigger type, according to duration
         triggerOrder(triggerOrder==.1,2) = 1; % trial start
         triggerOrder(triggerOrder==.3,2) = 2; % transition
@@ -220,35 +343,50 @@ switch task
              end
         end
         
-        behavSum = sum([startTrigs approachTrigs avoidTrigs]);
-        if nTrigs ~= behavSum
+        if strcmp(subject,'832746') && strcmp(task,'task') && all(behav.Practice==0)
+            if all(behav.Block==1)
+                behavOrder(behavOrder(:,2)>11 & behavOrder(:,1)~=1,:) = []; % we don't have the transition/image onsets 
+            elseif all(behav.Block==2)
+                behavOrder = [ones(nTrigs,1) [1:nTrigs]'];
+            end
+        end
             
-            % sometimes there is noise in the photodiode at the end
-            if nTrigs > behavSum
-                if all(triggerOrder(1:behavSum,2) == behavOrder(:,1))
-                    triggers = triggers(1:behavSum,:);
-                    triggerOrder = triggerOrder(1:behavSum,:);
-                    nTrigs = size(triggers,1);
+        if doChecks
+            
+            startTrigs = size(behav,1); % this many trial starts
+            approachTrigs = sum(behav.Choice==1)*5; % 1 x transition, 3 x images, 1 x outcome
+            avoidTrigs = sum(behav.Choice==2); % 1 x onset
+
+            behavSum = sum([startTrigs approachTrigs avoidTrigs]);
+            if nTrigs ~= behavSum
+
+                % sometimes there is noise in the photodiode at the end
+                if nTrigs > behavSum
+                    if all(triggerOrder(1:behavSum,2) == behavOrder(:,1))
+                        triggers = triggers(1:behavSum,:);
+                        triggerOrder = triggerOrder(1:behavSum,:);
+                        nTrigs = size(triggers,1);
+                    else
+                        error('Trigger mismatch')
+                    end
                 else
                     error('Trigger mismatch')
                 end
-            else
+
+                %{
+                figure; plot(D.time(1:croptime),pData); hold on
+                scatter(triggers.tOnset,pData(triggers.sOnset));
+                round(triggers.tDur,1)*10
+                %}
+            end
+
+            if any(triggerOrder(:,2) ~= behavOrder(:,1))
                 error('Trigger mismatch')
             end
-            
-            %{
-            figure; plot(D.time(1:croptime),pData); hold on
-            scatter(triggers.tOnset,pData(triggers.sOnset));
-            round(triggers.tDur,1)*10
-            %}
+
+            % If no errors, mark the 'outcome' screen (has same duration as images)
+            triggerOrder(find(diff(triggerOrder(:,2))==-2),2) = 4;
         end
-        
-        if any(triggerOrder(:,2) ~= behavOrder(:,1))
-            error('Trigger mismatch')
-        end
-        
-        % If no errors, mark the 'outcome' screen (has same duration as images)
-        triggerOrder(find(diff(triggerOrder(:,2))==-2),2) = 4;
         
         % Add descriptors
         triggers.type = cell(nTrigs,1);
@@ -272,7 +410,6 @@ switch task
         tmp(triggers.choice==1) = {'approach'};
         tmp(triggers.choice==2) = {'avoid'};
         triggers.choice = tmp;
-       
         
 end
 

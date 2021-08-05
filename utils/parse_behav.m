@@ -19,6 +19,8 @@ str = char(raw');
 fclose(fid); 
 behav = jsondecode(str);
 
+% results = mean(behav.x0_functional_localiser.acc);
+
 % Experiment structure
 fid = fopen(fstruct); 
 raw = fread(fid,inf); 
@@ -50,7 +52,7 @@ end
 
 rNames = {'Practice','Block','Trial','Catch','Forced','ExpTrial','nCombo','P','nV_1','nV_2',...
           'S1','S2','S3','S4','S5','S6','nS1','nS2','nS3','nS4','nS5','nS6',...
-          'EV','Choice','RT','Acc','Transition','Outcome'};
+          'EV','Choice','RT','Acc','Transition','Outcome','Timestamp'};
 results = array2table(nan(nTrls,length(rNames)),'VariableNames',rNames);
 for trl = 1:nTrls
 
@@ -122,6 +124,9 @@ for trl = 1:nTrls
         elseif strcmp(tmp.transition(idx),'SUPPLY ROOM')
             results.Transition(trl) = 0;
         end
+        
+        results.Timestamp(trl) = tmp.timeStamp(idx);
+        
     end
 end
 
@@ -155,6 +160,9 @@ if strcmp(subject,'680913')
     results(results.Practice==0 & results.Block==7 & results.Trial<5,:) = [];
     results(results.Practice==0 & results.Block==8 & (results.Trial==2),:) = [];
     results(results.Practice==0 & results.Block==10 & results.Trial<6,:) = [];
+end
+if strcmp(subject,'945092')
+    results(results.Practice==1 & results.Trial<=4,:) = []; % had to start MEG from trial 5 onwards because participant asked question during trial 4
 end
 
 % Write table
