@@ -17,11 +17,14 @@ N = length(subjects);
 
 %% Plot accuracy & RT & EV
 
-acc = nan(N,3);
+acc = nan(N,5);
+blockacc = nan(N,11);
 rt = nan(N,3);
 ev = nan(N,2);
 tc = nan(N,2);
 optimal = nan(N,2);
+trialcount = nan(N,4);
+experience = nan(N,2); % experience of each path
 for s = 1:N
    
     % Read in data
@@ -39,9 +42,27 @@ for s = 1:N
         rt(s,c) = mean(d.RT(d.Choice==c));
         ev(s,c) = mean(d.EV(d.Choice==c));
         tc(s,c) = mean(d.Choice==c);
+        trialcount(s,c) = sum(d.Choice==c);
     end
     acc(s,3) = mean(d.Acc);
     rt(s,3) = mean(d.RT);
+    
+    blockacc(s,1) = mean(d.Acc(d.Practice==1));
+    for b = 2:11
+        blockacc(s,b) = mean(d.Acc(d.Practice==0 & d.Block==b-1));
+    end
+    
+    % Separate normal trials from catch trials
+    catchidx = (d.nV_1 > 0 & d.nV_2 > 0) | (d.nV_1 < 0 & d.nV_2 < 0);
+    acc(s,4) = mean(d.Acc(~catchidx));
+    acc(s,5) = mean(d.Acc(catchidx));
+    trialcount(s,3) = sum(catchidx);
+    trialcount(s,4) = size(d,1);
+    
+    experience(s,1) = sum(d.Outcome(~catchidx)>0);
+    experience(s,2) = sum(d.Outcome(~catchidx)<0);
+    experience(s,3) = sum(d.nV_1==d.Outcome);
+    experience(s,4) = sum(d.nV_2==d.Outcome);
     
     optimal(s,1) = mean(d.EV >= 1);
     optimal(s,2) = mean(d.EV <= 1);
@@ -93,7 +114,7 @@ T.Choice = T.Choice+10;
 T.Choice(T.Choice==11) = 1;
 T.Choice(T.Choice==12) = 0;
 
-glme = fitglme(T,'Acc~Choice*RT+(1|Subject)')
+glme = fitglme(T,'Choice~Acc*RT+(1|Subject)','distribution','binomial')
 
 %% Plot
 

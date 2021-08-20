@@ -29,7 +29,16 @@ y = y(pointidx);
 x = x(pointidx);
 
 % see how many data points in each bin
-steps = linspace(min(y),max(y),ceil((max(y)-min(y))/binwidth));
+steps = NaN;
+thisy = y;
+factorincrease = 0;
+while length(steps)==1
+    steps = linspace(min(thisy),max(thisy),ceil((max(thisy)-min(thisy))/binwidth));
+    thisy = thisy*10;
+    factorincrease = factorincrease + 1;
+end
+steps = steps * 10^(factorincrease-1);
+
 n = nan(length(steps)-1,1);
 for i = 1:length(steps)-1
     idx = find(y >= steps(i) & y < steps(i+1));
