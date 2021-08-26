@@ -218,8 +218,8 @@ cfg.layout = 'CTF275.lay';
 neighbours = ft_prepare_neighbours(cfg);
 
 trigger_errors = [];
-for ds = 2%:length(Fs)
-    for s = 1:N % still need to do 20 for 600 Hz
+for ds = 1%:length(Fs)
+    for s = [1:2 4:N]%1:N % still need to do 20 for 600 Hz
 
         disp('==========================================================================================')
         disp('==========================================================================================')

@@ -394,6 +394,10 @@ ggsave("rewprob_replay.svg",g)
 
 
 
+m <- glmer(Choice ~ Replay_differential + Replay_average + (1|Subject/Lag),
+           data=md, family="binomial",
+           control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
 
 
 m0 <- glmer(Choice ~ EV + Certainty + (1|Subject/Lag),
@@ -626,93 +630,6 @@ tm <- cleandata(tm)
 tm <- addQ(tm,Q)
 tm$Modulation_average <- rowMeans(select(tm,Modulation_rewarding,Modulation_aversive))
 
-md <- tm
-md$Modulation_aversive <- scale(md$Modulation_aversive,center=TRUE,scale=FALSE)
-md$Modulation_rewarding <- scale(md$Modulation_rewarding,center=TRUE,scale=FALSE)
-md$Modulation_average <- scale(md$Modulation_average,center=TRUE,scale=FALSE)
-md$EV <- scale(md$EV,center=TRUE,scale=FALSE)
-md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
-md$BinChoice <- as.factor(md$Choice)
-
-m0 <- lmer(EV ~ Modulation_rewarding*Modulation_aversive + RT + (1|Subject/Lag),
-           data=filter(md,Choice==1), REML=TRUE,
-           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-
-m1 <- lmer(EV ~ Modulation_rewarding*Modulation_aversive + RT + (1|Subject/Lag),
-           data=filter(md,Choice==0), REML=TRUE,
-           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-
-m2 <- glmer(Choice ~ EV*Modulation_differential + Certainty + RT + (1|Subject/Lag),
-            data=md, family="binomial",
-            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-
-summary(m2)
-jtools::effect_plot(m2,pred=Modulation_rewarding,interval=TRUE)
-jtools::effect_plot(m2,pred=Modulation_aversive,interval=TRUE)
-
-
-pd <- tm %>%
-  group_by(Subject,Choice) %>%
-  mutate(Modulation_rewarding=mean(Modulation_rewarding),
-         Modulation_aversive=mean(Modulation_aversive),
-         Modulation_differential=mean(Modulation_differential)) %>%
-  as.data.frame()
-
-pd.sum <- pd %>%
-  group_by(Choice) %>%
-  summarise(Modulation_rewarding=mean(Modulation_rewarding),
-         Modulation_aversive=mean(Modulation_aversive),
-         Modulation_differential=mean(Modulation_differential)) %>%
-  as.data.frame()
-
-ggplot() + 
-  geom_point(data=pd.sum,aes(x=Choice,y=Modulation_rewarding),color="green") + 
-  geom_point(data=pd.sum,aes(x=Choice,y=Modulation_aversive),color="red") + 
-  theme_classic()
-
-
-pd <- tm %>%
-  mutate(EV=cut(EV,5)) %>%
-  group_by(Subject,EV,Choice) %>%
-  mutate(Modulation_rewarding=mean(Modulation_rewarding),
-         Modulation_aversive=mean(Modulation_aversive),
-         Modulation_differential=mean(Modulation_differential)) %>%
-  as.data.frame()
-
-pd.sum <- pd %>%
-  group_by(EV,Choice) %>%
-  summarise(Modulation_rewarding=mean(Modulation_rewarding),
-         Modulation_aversive=mean(Modulation_aversive),
-         Modulation_differential=mean(Modulation_differential)) %>%
-  as.data.frame()
-
-evcut <- levels(pd$EV)
-evcut <- cbind(as.numeric( sub("\\((.+),.*", "\\1", evcut) ),
-  as.numeric( sub("[^,]*,([^]]*)\\]", "\\1", evcut) ))
-evcut <- rowMeans(evcut)
-evcut <- seq(evcut[1],evcut[length(evcut)],length.out=5)
-
-pd.mod.aversive <- jtools::make_predictions(m0,pred="EV",pred.values=evcut)
-pd.mod.aversive$EV <- levels(pd$EV)
-pd.mod.rewarding <- jtools::make_predictions(m1,pred="EV",pred.values=evcut)
-pd.mod.rewarding$EV <- levels(pd$EV)
-
-pd.av <- pd.sum %>%
-  group_by(Choice) %>%
-  mutate(Modulation_rewarding = mean(Modulation_rewarding),
-         Modulation_aversive = mean(Modulation_aversive)) %>%
-  as.data.frame()
-
-ggplot() + 
-  geom_point(data=pd.sum,aes(x=EV,y=Modulation_aversive),color="red") +  
-  geom_line(data=pd.sum,aes(x=EV,y=Modulation_aversive,group=1),color="red") +  
-  geom_line(data=pd.av,aes(x=EV,y=Modulation_aversive,group=1),color="red") +
-  geom_point(data=pd.sum,aes(x=EV,y=Modulation_rewarding),color="green") +
-  geom_line(data=pd.sum,aes(x=EV,y=Modulation_rewarding,group=1),color="green") +
-  geom_line(data=pd.av,aes(x=EV,y=Modulation_rewarding,group=1),color="green") +
-  theme_classic() + facet_wrap(~Choice)
-
-
 # Add the two together
 combined <- d %>% 
   filter(Lag>min(tm$Lag)-10,Lag<max(tm$Lag)+10) %>%
@@ -756,7 +673,8 @@ pred$Modulation_differential[pred$Modulation_differential>0] = "rewarding_increa
 pred$Modulation_differential[pred$Modulation_differential!="rewarding_increase"] = "aversive_increase"
 
 ggplot(data=pred,aes(x=EV,y=Choice,group=grp,color=Replay_differential)) + 
-  geom_line(aes(linetype=Modulation_differential),size=1)
+  geom_line(aes(linetype=Modulation_differential),size=1) + 
+  theme_classic()
   
 
 m1 <- glmer(Choice ~ EV*Replay_differential + EV*Modulation_rewarding + RT + Certainty + (1|Subject/Lag),

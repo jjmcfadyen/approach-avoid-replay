@@ -126,21 +126,21 @@ for s = 1:N
         data.fsample = Fs;
     end
     
-    % split post-planning into first 3 seconds (transition/outcome) or last 3 seconds (outcome)
-    if strcmp(planningType,'post')
-        first = data;
-        last = data;
-        for trl = 1:length(data.trial)
-            
-            idx = first.time{trl} <= 3;
-            first.trial{trl} = first.trial{trl}(:,idx);
-            first.time{trl} = first.time{trl}(idx);
-            
-            idx = last.time{trl} >= last.time{trl}(end)-3;
-            last.trial{trl} = last.trial{trl}(:,idx);
-            last.time{trl} = last.time{trl}(idx);
-        end
-    end
+%     % split post-planning into first 3 seconds (transition/outcome) or last 3 seconds (outcome)
+%     if strcmp(planningType,'post')
+%         first = data;
+%         last = data;
+%         for trl = 1:length(data.trial)
+%             
+%             idx = first.time{trl} <= 3;
+%             first.trial{trl} = first.trial{trl}(:,idx);
+%             first.time{trl} = first.time{trl}(idx);
+%             
+%             idx = last.time{trl} >= last.time{trl}(end)-3;
+%             last.trial{trl} = last.trial{trl}(:,idx);
+%             last.time{trl} = last.time{trl}(idx);
+%         end
+%     end
 
     % Get replay for each classifier training time
     thesetimes = 110:10:140;

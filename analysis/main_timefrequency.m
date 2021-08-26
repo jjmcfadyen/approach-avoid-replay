@@ -10,6 +10,7 @@ dir_meg = 'D:\2020_RiskyReplay\data\meg';
 dir_behav = 'D:\2020_RiskyReplay\data\behav';
 dir_batch = 'D:\2020_RiskyReplay\approach-avoid-replay\analysis\batch';
 dir_scripts = 'D:\2020_RiskyReplay\approach-avoid-replay\';
+dir_classifiers = 'D:\2020_RiskyReplay\data\meg\classifiers';
 
 cd(dir_scripts)
 
@@ -156,18 +157,18 @@ load('D:\2020_RiskyReplay\data\meg\replay\withoutintercept\optimised_times.mat')
 
 %% Time-frequency
 
-bigT = [];
 for s = 1:N
     
-    % Compute here
-    directories = struct();
-    directories.dir_meg = dir_meg;
-    directories.dir_behav = dir_behav;
-    directories.dir_classifiers = dir_classifiers;
-    directories.dir_save = 'D:\2020_RiskyReplay\data\meg\timefrequency';
-    
-    thisT = compute_timefrequency(subjects{s},optimised_times(s),directories,true);
-    bigT = [thisT; bigT];
+%     % Compute here
+%     directories = struct();
+%     directories.dir_meg = dir_meg;
+%     directories.dir_behav = dir_behav;
+%     directories.dir_classifiers = dir_classifiers;
+%     directories.dir_save = 'D:\2020_RiskyReplay\data\meg\timefrequency';
+%     
+%     for w = [3 5 7 9 11]
+%         compute_timefrequency(subjects{s},optimised_times(s),directories,w);
+%     end
     
     % OR make jobs for cluster
     directories = struct();
@@ -178,9 +179,127 @@ for s = 1:N
     
     subject = subjects{s};
     optimised_time = optimised_times(s);
+    for w = [3 5 7 9 11]
+        waveletwidth = w;
+        filename = [subjects{s} '_w' num2str(w) '_tf-data.mat'];
+        save(fullfile(dir_batch,filename),'directories','subject','optimised_time','waveletwidth');
+        generate_jobs_timefrequency(['~/Scratch/2020_RiskyReplay/scripts/',filename]);
+    end
+end
+
+% writetable(bigT,'D:\2020_RiskyReplay\data\meg\timefrequency\tf_table.csv')
+% 
+% % LME on big table
+% bigT.Choice = bigT.Choice+10;
+% bigT.Choice(bigT.Choice==11) = 1; % approach
+% bigT.Choice(bigT.Choice==12) = 0; % avoid
+% bigT.Subject = categorical(bigT.Subject,unique(bigT.Subject),unique(bigT.Subject));
+% 
+% lme = fitglme(bigT,'Choice~Theta+Alpha+Beta+LowGamma+HighGamma+RT+(1|Subject)','distribution','binomial')
+
+%% Visualise the replay onsets
+
+avreplay = [];
+for s = 1:N
     
-    filename = [subjects{s} '_tf-data.mat'];
-    save(fullfile(dir_batch,filename),'directories','subject','optimised_time');
-    generate_jobs_timefrequency(['~/Scratch/2020_RiskyReplay/scripts/',filename]);
+    disp('==============================')
+    disp(['=== ' subjects{s} ' ==================='])
+    disp('==============================')
+
+    % Load merged data file
+    load(fullfile(directories.dir_meg,['7_merged_ds-600Hz'],[subjects{s} '_task_600Hz.mat'])); % loads 'merged' variable
+    data = merged;
+    clear merged;
     
+    nTrls = length(data.trial);
+    
+    % Load behavioural data
+    load(fullfile(directories.dir_behav,subjects{s},[subjects{s} '_parsedBehav.mat']))
+    behav = behav.task;
+    
+    % Match with MEG data
+    idx = zeros(nTrls,1);
+    for trl = 1:nTrls
+        if data.trialinfo(trl,1) == 0
+            thispractice = 1;
+            thisblock = 1;
+        else
+            thispractice = 0;
+            thisblock = data.trialinfo(trl,1);
+        end
+        thistrial = data.trialinfo(trl,2);
+        idx(trl,1) = find(behav.Practice==thispractice & behav.Block==thisblock & behav.Trial==thistrial);
+    end
+    behav = behav(idx,:);
+    
+    % Load time-frequency
+    load(['D:\2020_RiskyReplay\data\meg\timefrequency\' subjects{s} '_tf.mat']);
+    
+    % Average across choice types
+%     figure
+    for c = 1:2
+        
+        % merge
+        idx = find(behav.Choice==c & behav.Forced==0);
+        tmp = [];
+        for i = 1:length(idx)
+            cc = size(tmp,1);
+            if ~any(isnan(squash(rbTF{idx(i)})))
+                try
+                    tmp((cc+1):(cc+size(rbTF{idx(i)},1)),:,:) = rbTF{idx(i)};
+                catch
+                end
+            end
+        end
+%         x = linspace(-150,150,size(tmp,3));
+        avreplay(s,c,:,:) = squeeze(mean(tmp));
+%         
+%         subplot(1,2,c)
+%         imagesc(squeeze(mean(tmp)),'XData',x,'YData',freq{1});
+%         colormap(colours(100,'inferno'))
+%         view(180,90);
+%         set(gca,'xdir','reverse')
+%         hold on
+%         plot([0 0],freq{1}([1 end]),'w:')
+%         if c==1
+%             title('Approach')
+%         elseif c==2
+%             title('Avoid')
+%             colorbar
+%             tmp = squash(squeeze(avreplay(s,:,:,:)));
+%             thisclim = [-max(abs(tmp)) max(abs(tmp))];
+%             subplot(1,2,1)
+%             caxis(thisclim)
+%             subplot(1,2,2)
+%             caxis(thisclim)
+%         end
+    end
+%     drawnow
+%     sgtitle(subjects{s})
+    
+end
+
+% plot average
+x = linspace(-100,150,size(avreplay,4));
+
+figure
+for c = 1:2
+    subplot(1,2,c)
+    imagesc(squeeze(mean(avreplay(:,c,:,:))),'XData',x,'YData',freq{1});
+    colormap(colours(100,'inferno'))
+    view(180,90);
+    set(gca,'xdir','reverse')
+    hold on
+    plot([0 0],freq{1}([1 end]),'w:')
+    if c==1
+        title('Approach')
+    elseif c==2
+        title('Avoid')
+        tmp = squash(squeeze(avreplay(s,:,:,:)));
+        thisclim = [-max(abs(tmp)) max(abs(tmp))];
+        subplot(1,2,1)
+        caxis(thisclim)
+        subplot(1,2,2)
+        caxis(thisclim)
+    end
 end

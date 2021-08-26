@@ -102,7 +102,7 @@ for trl = 1:nTrls % DO NOT DO THIS IN PARALLEL - the time-frequency computation 
     [onsets, ~] = get_replayOnsets(thislow,classifier,lagrange);
 
     % Save
-    replay_onsets = [replay_onsets; onsets];
+    replay_onsets{t = onsets;
     
 end
 

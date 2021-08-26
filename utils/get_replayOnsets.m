@@ -65,7 +65,7 @@ for trl = 1:nTrls
         for i = 1:length(idx)
             
             % subset data in preceding 100ms
-            samplewindow = (idx(i)-(window/1000*data.fsample)):(idx(i)-1);
+            samplewindow = round((idx(i)-(window/1000*data.fsample)):(idx(i)-1));
             samplewindow = samplewindow(samplewindow>0 & samplewindow<size(binonsets_perpath,1)); % remove negative samples
             
             if path<3

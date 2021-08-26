@@ -12,9 +12,9 @@ scriptdir = '~/Scratch/2020_RiskyReplay/scripts';
 dir_batch = 'D:\2020_RiskyReplay\approach-avoid-replay\analysis\batch';
 
 % Job settings
-timechar = '1:00:00'; % max job duration (hours : minutes : seconds)
+timechar = '3:30:00'; % max job duration (hours : minutes : seconds)
 functionName = 'cluster_timefrequency'; % the function that will be called on the cluster
-RAM = '5G'; % RAM allocated to each job
+RAM = '8G'; % RAM allocated to each job
 
 %% Read in jobs
 
@@ -34,9 +34,10 @@ F = template;
 % what to call copy of template
 filesplit = strsplit(filename, '_');
 subject = filesplit{2}(end-5:end);
+waveletwidth = filesplit{3};
 
-fname = fullfile(dir_batch,['job_' subject '_timefrequency.sh']);
-jobname = ['s' subject '_timefrequency'];
+fname = fullfile(dir_batch,['job_' subject '_' waveletwidth '_timefrequency.sh']);
+jobname = ['s' subject '_' waveletwidth '_timefrequency'];
 
 for i = 1:length(template) % for each line...
 

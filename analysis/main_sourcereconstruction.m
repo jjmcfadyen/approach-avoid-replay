@@ -41,95 +41,20 @@ CV = [];
 lambdas = [];
 for s = 1:N
 
-    %% Get best lambda for each classifier
-    for t = 1:nT
-        
-        % Load cross-validation accuracy
-        load(fullfile(dir_classifiers,subjects{s},...
-            ['cv_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(thisnull) '.mat']));
-        
-        % Average over folds
-        cv = squeeze(nanmean(cv));
-
-        % Get best lambda (averaged across conditions)
-        [~,best_lambda] = max(nanmean(cv));
-        lambdas(s,t) = best_lambda;
-
-        % Get minimum accuracy across all 6 states
-        CV(s,t,1) = min(cv(:,best_lambda)); 
-        CV(s,t,2) = mean(cv(:,best_lambda)); 
-        CV(s,t,3) = max(cv(:,best_lambda)); 
-        
-    end
+    [thiscv,thislambda] = get_bestLambdas(subjects{s},trainTimes,thisnull);
+    CV(s,:,:) = thiscv;
+    lambdas(s,:) = thislambda;
+    
 end
 
-%% Get replay onsets for each subject
+%% Epoch the replay onsets for each subject (SPM format)
 
 lagrange = 20:10:90; % lags at which to look for onsets (in ms)
 
-replay_onsets = [];
-for s = 1:N
-   
-    disp(['Getting replay onsets for ' subjects{s} '...'])
-    
-    % Get classifier
-    thislambda = lambdas(s,trainTimes==optimised_times(s));
-    load(fullfile(dir_classifiers,subjects{s},['classifier_' subjects{s} '_t' num2str(optimised_times(s)) '_n' num2str(thisnull) '.mat']));
-    classifier.betas = squeeze(classifier.betas(:,:,thislambda));
-    classifier.intercepts = classifier.intercepts(:,thislambda);
-    
-    % Get task data
-    load(fullfile(dir_meg,['7_merged_ds-100Hz'],[subjects{s} '_task_100Hz.mat'])); % loads 'merged' variable
-    if ~isfield(merged,'fsample')
-        merged.fsample = 100;
-    end
-    
-    % Identify replay onsets
-    onsets = get_replayOnsets(merged,classifier,lagrange);
-    
-    % Remove onsets from baseline
-    onsets = onsets(onsets.Onset_time>0,:);
-    
-    % Match with behavioural data
-    load(fullfile(dir_behav,subjects{s},[subjects{s} '_parsedBehav.mat']))
-    behav = behav.task;
-    
-    % Create table
-    onsets.Choice = nan(size(onsets,1),1);
-    onsets.Forced = nan(size(onsets,1),1);
-    onsets.P = nan(size(onsets,1),1);
-    onsets.nV_1 = nan(size(onsets,1),1);
-    onsets.nV_2 = nan(size(onsets,1),1);
-    onsets.ExpTrial = nan(size(onsets,1),1);
-    onsets.EV = nan(size(onsets,1),1);
-    onsets.RT = nan(size(onsets,1),1);
-    for trl = 1:size(behav,1)
-        idx = find(behav.Practice(trl)==onsets.Practice & ...
-                   behav.Block(trl)==onsets.Block & ...
-                   behav.Trial(trl)==onsets.Trial);
-        onsets.Choice(idx)  = behav.Choice(trl);
-        onsets.Forced(idx)          = behav.Forced(trl);
-        onsets.P(idx)           = behav.P(trl);
-        onsets.nV_1(idx)        = behav.nV_1(trl);
-        onsets.nV_2(idx)        = behav.nV_2(trl);
-        onsets.ExpTrial(idx)    = behav.ExpTrial(trl);
-        onsets.EV(idx)          = behav.EV(trl);
-        onsets.RT(idx)          = behav.RT(trl);
-    end
-    
-    % Remove onests in post-decision 500 ms window
-    onsets(onsets.Onset_time > onsets.RT,:) = [];
-    
-    % Add to group table
-    onsets.Subject = repmat({subjects{s}},size(onsets,1),1);
-    replay_onsets = [replay_onsets; onsets];
-    
-end
-
-%% Epoch the data to the replay onsets
-
 addpath('D:\Toolboxes\spm12')
 spm('defaults','eeg')
+
+dir_save = 'D:\2020_RiskyReplay\data\meg\replay\epochs';
 
 epochtype = 'long'; % 'short' = -100 to 150ms, 'long' = -1000 to 1000 ms
 switch epochtype
@@ -141,75 +66,133 @@ end
 
 for s = 1:N
    
-    dir_output = fullfile(dir_meg,['8_replayepochs-600Hz'],subjects{s});
-    if ~exist(dir_output)
-        mkdir(dir_output)
+    disp(['Getting replay onsets for ' subjects{s} '...'])
+    
+    if ~exist(fullfile(dir_save,subjects{s}))
+        mkdir(fullfile(dir_save,subjects{s}))
     end
-   
-    % Load data used to determine replay onsets
-    load(fullfile(dir_meg,'7_merged_ds-100Hz',[subjects{s} '_task_100Hz.mat'])); % loads 'merged' variable
     
-    % Get behavioural logs for main task
-    behav = parse_behav(subjects{s},dir_behav);
+    % Get classifier
+    thislambda = lambdas(s,trainTimes==optimised_times(s));
+    load(fullfile(dir_classifiers,subjects{s},['classifier_' subjects{s} '_t' num2str(optimised_times(s)) '_n' num2str(thisnull) '.mat']));
+    classifier.betas = squeeze(classifier.betas(:,:,thislambda));
+    classifier.intercepts = classifier.intercepts(:,thislambda);
     
-    subjectparams = parameters(contains(parameters.schar,subjects{s}) & contains(parameters.task,'task'),:);
-    nRuns = size(subjectparams,1);
+    % Get task data (100 Hz)
+    load(fullfile(dir_meg,['7_merged_ds-100Hz'],[subjects{s} '_task_100Hz.mat'])); % loads 'merged' variable
+    if ~isfield(merged,'fsample')
+        merged.fsample = 100;
+    end
     
-    for r = 1:nRuns
+    % Identify replay onsets
+    onsets = get_replayOnsets(merged,classifier,lagrange);
     
-        % Get continuous data 
-        D = spm_eeg_load(fullfile(dir_meg,'5_ICA_ds-600Hz',subjects{s},...
-            ['ICA_ds-600Hz_' subjects{s} '_task_r' num2str(subjectparams.block(r)) '.mat'])); % loads 'merged' variable
+    % Remove onsets that occur during baseline
+    onsets = onsets(onsets.Onset_time>0,:);
+    
+    % Match with behavioural data
+    load(fullfile(dir_behav,subjects{s},[subjects{s} '_parsedBehav.mat']))
+    behav = behav.task;
+    
+    % Make epochs for the replay onsets per trial
+    filelist = parameters.block(contains(parameters.schar,subjects{s}) & contains(parameters.task,'task'));
+    for f = 1:length(filelist)
+    
+        % Load 600 Hz continuous data for each block
+        D = spm_eeg_load(fullfile(dir_meg,'5_ICA_ds-600Hz',subjects{s},['ICA_ds-600Hz_' subjects{s} '_task_r' num2str(filelist(f)) '.mat']));
+
+        % Get events from this continuous run
+        events = D.events;
         
-        % Get replay onsets for this block
-        thisrun = subjectparams.block(r);
-        if thisrun==0
-            thisblock = 1;
-            thispractice = 1;
-        else
-            thisblock = thisrun;
-            thispractice = 0;
-        end
-        thesereplayonsets = replay_onsets(contains(replay_onsets.Subject,subjects{s}) & replay_onsets.Practice==thispractice & replay_onsets.Block==thisblock,:);
+        etypes = extractfield(events,'type');
+        etime = extractfield(events,'time');
         
-        % Convert the replay onsets to continuous time (rather than the time since the start of each trial)
-        trls = unique(thesereplayonsets.Trial); % trials in this block
-        for i = 1:length(trls)
-            idx = thesereplayonsets.Trial==trls(i); % which replay onsets belong to this trial
-            sampleonsets = merged.sampleinfo(merged.trialinfo(:,1)==thisrun & merged.trialinfo(:,2)==trls(i),:);
-            thesereplayonsets.Onset_sample(idx) = thesereplayonsets.Onset_sample(idx) + sampleonsets(1);
+        evalues = nan(length(events),1);
+        for i = 1:length(evalues)
+            if ~ischar(events(i).value)
+                evalues(i) = events(i).value;
+            end
         end
-        thesereplayonsets.Onset_time = thesereplayonsets.Onset_sample/100;
+        etypes = etypes(~isnan(evalues));
+        etime = etime(~isnan(evalues));
+        evalues = evalues(~isnan(evalues));
         
-        if thesereplayonsets.Onset_time(end) > D.time(end)
-            error('Replay onsets end AFTER the continuous data!')
+        nEvents = length(evalues);
+
+        % Align each trial event with replay onsets
+        trials = unique(evalues);
+        blockonsets = [];
+        for trl = 1:length(trials)
+            
+            % block number * 100 + trial number (e.g., block 2, trial 6 = 206)
+            thisval = sprintf('%04d',trials(trl));
+            thisblock = str2double(thisval(1:2));
+            thistrial = str2double(thisval(3:end));
+            
+            thispractice=0;
+            if thisblock==0
+                thispractice=1;
+                thisblock=1;
+            end
+            
+            idx = behav.Practice==thispractice & behav.Block==thisblock & behav.Trial==thistrial;
+            
+            decisiononset = etime(evalues==trials(trl) & contains(etypes,'decision')');
+            if isempty(decisiononset)
+                error('Trial onset not found in continuous data')
+            end
+            
+            trialonsets = onsets(onsets.Practice==thispractice & onsets.Block==thisblock & onsets.Trial==thistrial,:);
+            n = size(trialonsets,1);
+            
+            trialonsets.ctime = trialonsets.Onset_time + decisiononset;
+            trialonsets.csample = nan(n,1);
+            for i = 1:n
+                trialonsets.csample(i) = D.indsample(trialonsets.ctime(i)); 
+            end
+            if any(trialonsets.csample==0)
+                error('Sample out of range')
+            end
+            
+            trialonsets.choice = repmat(behav.Choice(idx),n,1);
+            trialonsets.include = repmat(behav.Forced(idx)==0 & ((behav.nV_1(idx)>0 & behav.nV_2(idx)<0) | (behav.nV_1(idx)<0 & behav.nV_2(idx)>0)),n,1);
+
+            if behav.nV_1(idx) > behav.nV_2(idx)
+                rewpath = 1;
+                avpath = 2;
+            else
+                rewpath = 2;
+                avpath = 1;
+            end
+            trialonsets.type(trialonsets.Path==0) = {'any'};
+            trialonsets.type(trialonsets.Path==1 & rewpath==1) = {'rewarding'};
+            trialonsets.type(trialonsets.Path==2 & rewpath==2) = {'rewarding'};
+            trialonsets.type(trialonsets.Path==1 & avpath==1) = {'aversive'};
+            trialonsets.type(trialonsets.Path==2 & avpath==2) = {'aversive'};
+            
+            blockonsets = [blockonsets; trialonsets];
+            
         end
+        
+        blockonsets = blockonsets(blockonsets.include==1,:); % remove forced-choice & catch trials
+        nOnsets = size(blockonsets,1);
         
         % Epoch replay events
         S = [];
-        S.D = fullfile(dir_meg,'5_ICA_ds-600Hz',subjects{s},...
-            ['ICA_ds-600Hz_' subjects{s} '_task_r' num2str(subjectparams.block(r)) '.mat']);
+        S.D = D;
         S.bc = 0;
-        S.trl = [thesereplayonsets.Onset_sample - abs(twin(1))*D.fsample,... % onset, minus 100 ms baseline
-                 thesereplayonsets.Onset_sample + abs(twin(2))*D.fsample,... % offset (onset + 150 ms)
-                 repmat(twin(1)*D.fsample,size(thesereplayonsets,1),1)]; % trial shift to accomodate baseline
+        S.trl = [blockonsets.csample - abs(twin(1))*D.fsample,... % onset, minus 100 ms baseline
+                 blockonsets.csample + abs(twin(2))*D.fsample,... % offset (onset + 150 ms)
+                 repmat(twin(1)*D.fsample,size(blockonsets,1),1)]; % trial shift to accomodate baseline
              
-        S.conditionlabels = cell(size(thesereplayonsets,1),1);
-        for i = 1:length(S.conditionlabels)
-            if thesereplayonsets.Choice(i)==1
+        S.conditionlabels = cell(nOnsets,1);
+        for i = 1:nOnsets
+            if blockonsets.choice(i)==1
                 choicelabel = 'approach';
             else
                 choicelabel = 'avoid';
             end
-            if thesereplayonsets.Path(i)==1 && thesereplayonsets.nV_1(i)>thesereplayonsets.nV_2(i)
-                pathlabel = 'rewardingreplay_';
-            elseif thesereplayonsets.Path(i)==2 && thesereplayonsets.nV_1(i)<thesereplayonsets.nV_2(i)
-                pathlabel = 'rewardingreplay_';
-            elseif thesereplayonsets.Path(i)==1 && thesereplayonsets.nV_1(i)<thesereplayonsets.nV_2(i)
-                pathlabel = 'aversivereplay_';
-            elseif thesereplayonsets.Path(i)==2 && thesereplayonsets.nV_1(i)>thesereplayonsets.nV_2(i)
-                pathlabel = 'aversivereplay_';
-            end
+            pathlabel = [blockonsets.type{i} 'replay_'];
             S.conditionlabels{i} = [pathlabel choicelabel];
         end
         
@@ -223,10 +206,30 @@ for s = 1:N
         S.prefix = '';
         epoched = spm_eeg_bc(S);
         
-        % Move
-        epoched.move(fullfile(dir_output,['replay-epochs-' epochtype '_ds-600Hz_' subjects{s} '_task_r' num2str(thisrun) '.mat']));
+        % Move file
+        epoched.move(fullfile(dir_save,subjects{s},['replay-epochs_r' num2str(filelist(f)) '_' subjects{s} '.mat']));
+        
+    end  
     
+    % Merge
+    S = [];
+    S.D = cell(1,length(filelist));
+    for f = 1:length(filelist)
+        S.D{f} = spm_eeg_load(fullfile(dir_save,subjects{s},['replay-epochs_r' num2str(filelist(f)) '_' subjects{s} '.mat']));
     end
+    replayepochs = spm_eeg_merge(S);
+    
+    replayepochs.move(fullfile(dir_save,subjects{s},['replay-epochs_all_' subjects{s} '.mat']));
+    
+end
+
+%% MSP
+
+for s = 1:N
+   
+    
+    
+    
 end
 
 %% Do time-frequency analysis in Fieldtrip
@@ -392,7 +395,7 @@ avlag = [];
 for s = 1:N
     
     tmp = replay_onsets(contains(replay_onsets.Subject,subjects{s}),:);
-    theseonsets = [tmp.Path tmp.Onset_time];
+    blockonsets = [tmp.Path tmp.Onset_time];
     
     % chunk into path replay sections
     thislag = [];
