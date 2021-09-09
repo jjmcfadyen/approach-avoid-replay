@@ -6,7 +6,7 @@
 #$ -l h_rt=[TIME]
 
 # Request X gigabytes of RAM per core. --> FILLED IN BY MATLAB SCRIPT
-#$ -l [RAM]
+#$ -l mem=[RAM]
 
 # Request 10 gigabyte of TMPDIR space
 #$ -l tmpfs=1G

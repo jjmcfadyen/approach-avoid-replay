@@ -34,6 +34,11 @@ load('D:\2020_RiskyReplay\data\meg\replay\withoutintercept\optimised_times.mat')
 
 %% See if replay onsets are anticorrelated across trial time
 
+pathperms = [1 2 3 4;  % between-paths
+             1 1 2 2;  % within-path (1)
+             3 3 4 4]; % within-path (2)
+nIterations = size(pathperms,1); 
+
 T = [];
 for s = 1:N
     
@@ -75,20 +80,14 @@ for s = 1:N
     classifier.betas = squeeze(classifier.betas(:,:,lambdas(trainTimes==optimised_times(s))));
     classifier.intercepts = squeeze(classifier.intercepts(:,lambdas(trainTimes==optimised_times(s))));
 
-    trialdur = nan(nTrls,1);
-    for trl = 1:nTrls
-        trialdur(trl,1) = length(data.time{trl});
-    end
-    
-    pvals = [];
-    rhos = [];
-    meanamp = nan(nTrls,2,max(trialdur));
-    pathfreq = [];
-    pathphase = [];
-    for trl = 1:nTrls
-
-%         disp(['Trial ' num2str(trl) ' of ' num2str(nTrls) '...'])
-        
+    pvals = nan(nIterations,nTrls);
+    rhos = nan(nIterations,nTrls);
+    lags = nan(nIterations,nTrls);
+    xrhos = nan(nIterations,nTrls);
+    pathfreq = nan(nIterations,nTrls,2);
+    pathphase = nan(nIterations,nTrls,2);
+    parfor trl = 1:nTrls
+ 
         cfg = [];
         cfg.trials = trl;
         thistrial = ft_selectdata(cfg,data); % 100 hz data for replay
@@ -96,39 +95,45 @@ for s = 1:N
         [onsets, seqevidence] = get_replayOnsets(thistrial,classifier,lagrange);
         
         seqevidence = seqevidence{1}(sum(isnan(seqevidence{1}),2)==0,:);
-        path1 = mean(seqevidence(:,1:2),2);
-        path2 = mean(seqevidence(:,3:4),2);
         x = thistrial.time{1}(1:size(seqevidence,1));
-        
-        if x(end) >= 5
-            % ignore first second of data (items were flashing on-screen)
-            xidx = x >= 1;
-            path1 = path1(xidx);
-            path2 = path2(xidx);
-            x = x(xidx);
 
-            [r,p] = corr(path1,path2);
-            rhos(trl,1) = r;
-            pvals(trl,1) = p;
+        % ignore first second of data (items were flashing on-screen)
+        xidx = x >= 1;
+        thisx = x(xidx);
 
-            if behav.Forced(trl)==0 && ((behav.nV_1(trl)>0 && behav.nV_2(trl)<0) || (behav.nV_1(trl)<0 && behav.nV_2(trl)>0))
-                if behav.nV_1(trl) > behav.nV_2(trl)
-                    meanamp(trl,1,1:length(x)) = path1;
-                    meanamp(trl,2,1:length(x)) = path2;
-                else
-                    meanamp(trl,1,1:length(x)) = path2;
-                    meanamp(trl,2,1:length(x)) = path1;
-                end
+        thisrho = nan(nIterations,1);
+        thispval = nan(nIterations,1);
+        thislag = nan(nIterations,1);
+        thisxrho = nan(nIterations,1);
+        thispathfreq = nan(nIterations,2);
+        thispathphase = nan(nIterations,2);
+        if x(end)>=5
+            for it = 1:size(pathperms,1)
+
+                path1 = mean(seqevidence(xidx,pathperms(it,1:2)),2);
+                path2 = mean(seqevidence(xidx,pathperms(it,3:4)),2);
+
+                [r,p] = corr(path1,path2);
+                thisrho(it,1) = r;
+                thispval(it,1) = p;
+
+                [C,LAGS] = xcorr(path1,path2,'coeff');
+                thislag(it,1) = abs(LAGS(C==max(C))*(1/100));
+                thisxrho(it,1) = max(C);
+
+                [freq,amp,phase] = getPhase(thisx,path2);
+                thispathfreq(it,2) = freq(amp==max(amp));
+                thispathphase(it,2) = phase(amp==max(amp));
             end
-
-            [freq,amp,phase] = getPhase(x,path1);
-            pathfreq(trl,1) = freq(amp==max(amp));
-            pathphase(trl,1) = phase(amp==max(amp));
-
-            [freq,amp,phase] = getPhase(x,path2);
-            pathfreq(trl,2) = freq(amp==max(amp));
-            pathphase(trl,2) = phase(amp==max(amp));
         end
+
+        rhos(:,trl) = thisrho;
+        pvals(:,trl) = thispval;
+        lags(:,trl) = thislag;
+        xrhos(:,trl) = thisxrho;
+        pathfreq(:,trl,:) = thispathfreq;
+        pathphase(:,trl,:) = thispathphase;
+
     end
     
 %     % Show correlation between paths
@@ -154,83 +159,205 @@ for s = 1:N
 %         [num2str(round(mean(pathfreq(:,2)))) ' Hz, ' num2str(round(mean(pathphase(:,2)),2))]})
     
     % Make table
-    thisT = behav(:,ismember(behav.Properties.VariableNames,...
-        {'Practice','Block','Trial','Forced','ExpTrial','P','nV_1','nV_2','EV','Choice','Acc','RT','Subject'}));
-    thisT.Replay_correlation = rhos;
-    thisT.Replay_corrpvals = pvals;
-    thisT.Rewarding_freq = pathfreq(:,1);
-    thisT.Aversive_freq = pathfreq(:,2);
-    thisT.Rewarding_phase = pathphase(:,1);
-    thisT.Aversive_phase = pathphase(:,2);
-    
-    T = [T; thisT];
-    
+    for it = 1:nIterations
+        thisT = behav(:,ismember(behav.Properties.VariableNames,...
+            {'Practice','Block','Trial','Forced','ExpTrial','P','nV_1','nV_2','EV','Choice','Acc','RT','Subject'}));
+        thisT.PathIteration = repmat(it,size(thisT,1),1);
+        thisT.Replay_correlation = rhos(it,:)';
+        thisT.Replay_corrpvals = pvals(it,:)';
+        thisT.Rewarding_freq = pathfreq(it,:,1)';
+        thisT.Aversive_freq = pathfreq(it,:,2)';
+        thisT.Rewarding_phase = pathphase(it,:,1)';
+        thisT.Aversive_phase = pathphase(it,:,2)';
+        thisT.CrossCorr = xrhos(it,:)';
+        thisT.CrossLag = lags(it,:)';
+        T = [T; thisT];
+    end
 end
 
-writetable(T,fullfile('D:\2020_RiskyReplay\results\timefrequency','frequency_table.csv'));
+writetable(T,'D:\2020_RiskyReplay\results\replay_correlation.csv');
 
 %% T-tests
 
-vN = {'Replay_correlation','Replay_corrpvals','Rewarding_freq','Aversive_freq','Rewarding_phase','Aversive_phase','Phase_diff'};
+excludeSubjects = {'263098','680913'};
+
+vN = {'Replay_correlation','Replay_corrpvals','Rewarding_freq','Aversive_freq','Rewarding_phase','Aversive_phase','CrossCorr','CrossLag','Phase_diff',};
 
 x = [];
 for s = 1:N
-    
-    idx = T.Subject==str2double(subjects{s}) & T.Forced==0 & T.RT >= 5;
-    tmp = [table2array(T(idx,ismember(T.Properties.VariableNames,vN))) abs(rad2deg(T.Rewarding_phase(idx))-rad2deg(T.Aversive_phase(idx)))];
-    x = [x; array2table(mean(tmp),'variablenames',vN)];
-    
+    if ~strcmp(subjects{s},excludeSubjects)
+        try
+            idx = T.Subject==str2double(subjects{s});
+        catch
+            idx = contains(T.Subject,subjects{s});
+        end
+        idx = idx & T.Forced==0 & T.RT >= 5 & T.PathIteration==1;
+        tmp = [table2array(T(idx,ismember(T.Properties.VariableNames,vN))) abs(rad2deg(T.Rewarding_phase(idx))-rad2deg(T.Aversive_phase(idx)))];
+        x = [x; array2table(nanmean(tmp),'variablenames',vN)];
+    end
 end
 
+null = cell(1,nIterations-1);
+for n = 1:nIterations-1
+    for s = 1:N
+        if ~strcmp(subjects{s},excludeSubjects)
+            try
+                idx = T.Subject==str2double(subjects{s});
+            catch
+                idx = contains(T.Subject,subjects{s});
+            end
+            idx = idx & T.Forced==0 & T.RT >= 5 & T.PathIteration==n+1;
+            tmp = [table2array(T(idx,ismember(T.Properties.VariableNames,vN))) abs(rad2deg(T.Rewarding_phase(idx))-rad2deg(T.Aversive_phase(idx)))];
+            null{n} = [null{n}; array2table(nanmean(tmp),'variablenames',vN)];
+        end
+    end
+end
 
 
 [H,P,CI,STATS] = ttest(x.Replay_correlation)
 
+% figure
+% w = .1;
+% [X,Y] = beeswarm(x.Replay_correlation,.05,w);
+% scatter(X,Y,50,'markerfacecolor','k','markeredgealpha',0,'markerfacealpha',.6); hold on
+% patch([0-w 0+w 0+w 0-w 0-w],[CI(2) CI(2) CI(1) CI(1) CI(2)],'w','facealpha',.3,'edgecolor','k','linewidth',1.5); hold on
+% plot([0-w 0+w],repmat(mean(Y),2,1),'k','linewidth',1.5); hold on
+% xlim([-0.5 0.5])
+% set(gca,'ticklength',[0 0])
+% title('(anti)correlation')
+% 
+% plot([-.5 .5],repmat(quantile(null.Replay_correlation,.025),2,1),'r:');
+
+y = T.Replay_correlation(~isnan(T.Replay_correlation) & T.Forced==0 & T.RT >= 5 & T.PathIteration==1 & ~ismember(T.Subject,excludeSubjects));
+
 figure
-w = .1;
-[X,Y] = beeswarm(x.Replay_correlation,.05,w);
-scatter(X,Y,50,'markerfacecolor','k','markeredgealpha',0,'markerfacealpha',.6); hold on
-patch([0-w 0+w 0+w 0-w 0-w],[CI(2) CI(2) CI(1) CI(1) CI(2)],'w','facealpha',.3,'edgecolor','k','linewidth',1.5); hold on
-plot([0-w 0+w],repmat(mean(Y),2,1),'k','linewidth',1.5); hold on
-xlim([-0.5 0.5])
+
+histogram(y,20,'facecolor',[0 0 0],'facealpha',.2,'normalization','pdf','edgecolor','none'); hold on
+pd = pdf(fitdist(y,'normal'),linspace(-1,1,100));
+plot(linspace(-1,1,100),pd,'k');
+
 set(gca,'ticklength',[0 0])
+ax = gca;
 
-cmap = [0, 237, 172 
-        255, 0, 116 ]/255;
-
-[H,P,CI,STATS] = ttest(x.Rewarding_freq,x.Aversive_freq)
-
-figure
-set(gcf,'position',[440 380 360 418])
-w = .1;
-for i = 1:2
-    if i==1
-        [X,Y] = beeswarm(x.Rewarding_freq,.15,w);
-    elseif i==2
-        [X,Y] = beeswarm(x.Aversive_freq,.15,w);
-    end
-    upper = mean(Y)+std(Y)/sqrt(length(Y));
-    lower = mean(Y)-std(Y)/sqrt(length(Y));
-    X = X+i;
-    scatter(X,Y,50,'markerfacecolor',cmap(i,:),'markeredgealpha',0,'markerfacealpha',.6); hold on
-    patch([i-w i+w i+w i-w i-w],[upper upper lower lower upper],'w','facealpha',.3,'edgecolor','k','linewidth',1.5); hold on
-    plot([i-w i+w],repmat(mean(Y),2,1),'k','linewidth',1.5); hold on
+meany = x.Replay_correlation;
+meannull = [];
+for n = 1:length(null)
+    meannull(:,n) = null{n}.Replay_correlation;
 end
-xlim([0.5 2.5])
-set(gca,'ticklength',[0 0])
+meannull = quantile(abs(meannull'),.95);
+
+plot(repmat(nanmean(meany),2,1),ax.YLim,'r','linewidth',1.4);
+plot(repmat(-mean(meannull),2,1),ax.YLim,'k--','linewidth',1.4);
+plot(repmat(mean(meannull),2,1),ax.YLim,'k--','linewidth',1.4);
+xlim([-1 1])
 
 
 
-[H,P,CI,STATS] = ttest(x.Phase_diff)
+y = T.CrossLag(~isnan(T.CrossLag) & T.Forced==0 & T.RT >= 5 & T.PathIteration==1 & ~ismember(T.Subject,excludeSubjects));
 
 figure
-w = .1;
-[X,Y] = beeswarm(x.Phase_diff,10,w);
-scatter(X,Y,50,'markerfacecolor','k','markeredgealpha',0,'markerfacealpha',.6); hold on
-patch([0-w 0+w 0+w 0-w 0-w],[CI(2) CI(2) CI(1) CI(1) CI(2)],'w','facealpha',.3,'edgecolor','k','linewidth',1.5); hold on
-plot([0-w 0+w],repmat(mean(Y),2,1),'k','linewidth',1.5); hold on
-xlim([-0.5 0.5])
+
+histogram(y,20,'facecolor',[0 0 0],'facealpha',.2,'normalization','pdf','edgecolor','none'); hold on
+pd = pdf(fitdist(y,'normal'),linspace(0,1.2,100));
+plot(linspace(0,1.2,100),pd,'k');
+
 set(gca,'ticklength',[0 0])
+ax = gca;
+
+meany = x.CrossLag;
+meannull = [];
+for n = 1:length(null)
+    meannull(:,n) = null{n}.CrossLag;
+end
+meannull = quantile(abs(meannull'),.95);
+
+plot(repmat(nanmean(meany),2,1),ax.YLim,'r','linewidth',1.4);
+plot(repmat(mean(meannull),2,1),ax.YLim,'k--','linewidth',1.4);
+xlim([0,1.1])
+
+
+% Find example trial
+tmp = T(T.PathIteration==1 & T.RT>=5 & T.Forced==0 & ~ismember(T.Subject,excludeSubjects),:);
+tmp = tmp(tmp.Replay_correlation == min(tmp.Replay_correlation),:);
+
+s = find(contains(subjects,tmp.Subject));
+trl = T(contains(T.Subject,subjects{s}) & T.PathIteration==1,:);
+trl = find(trl.ExpTrial==tmp.ExpTrial);
+
+subject = subjects{s};
+    
+disp('==============================')
+disp(['=== ' subject ' ==='])
+disp('==============================')
+
+% Load data
+load(fullfile(dir_meg,['7_merged_ds-100Hz'],[subject '_task_100Hz.mat'])); % loads 'merged' variable
+data = merged;
+clear merged;
+
+nTrls = length(data.trial);
+
+% Load behavioural data
+load(fullfile(dir_behav,subject,[subject '_parsedBehav.mat']))
+behav = behav.task;
+
+% Match with MEG data
+idx = zeros(nTrls,1);
+for trl = 1:nTrls
+    if data.trialinfo(trl,1) == 0
+        thispractice = 1;
+        thisblock = 1;
+    else
+        thispractice = 0;
+        thisblock = data.trialinfo(trl,1);
+    end
+    thistrial = data.trialinfo(trl,2);
+    idx(trl,1) = find(behav.Practice==thispractice & behav.Block==thisblock & behav.Trial==thistrial);
+end
+behav = behav(idx,:);
+
+% Get classifier info for this subject
+[~,lambdas] = get_bestLambdas(subject,trainTimes,1);
+load(fullfile(dir_classifiers,subject,['classifier_' subject '_t' num2str(optimised_times(s)) '_n1.mat'])); % loads 'classifier'
+classifier.betas = squeeze(classifier.betas(:,:,lambdas(trainTimes==optimised_times(s))));
+classifier.intercepts = squeeze(classifier.intercepts(:,lambdas(trainTimes==optimised_times(s))));
+
+y = [];
+
+cfg = [];
+cfg.trials = trl;
+thistrial = ft_selectdata(cfg,data); % 100 hz data for replay
+
+[onsets, seqevidence] = get_replayOnsets(thistrial,classifier,lagrange);
+
+seqevidence = seqevidence{1}(sum(isnan(seqevidence{1}),2)==0,:);
+x = thistrial.time{1}(1:size(seqevidence,1));
+
+if behav.nV_1(trl) > behav.nV_2
+    rewpath = seqevidence(:,1:2);
+    losspath = seqevidence(:,3:4);
+else
+    losspath = seqevidence(:,1:2);
+    rewpath = seqevidence(:,3:4);
+end
+
+rewpath = mean(rewpath,2);
+losspath = mean(losspath,2);
+
+srew = smooth(rewpath,5);
+sloss = smooth(losspath,5);
+
+cmap = [0, 223, 115
+    245, 0, 82]/255;
+
+figure
+% plot(x,rewpath,'color',cmap(1,:),'linewidth',1.2,'linestyle',':'); hold on
+% plot(x,losspath,'color',cmap(2,:),'linewidth',1.2,'linestyle',':'); hold on
+plot(x,srew,'color',cmap(1,:),'linewidth',1.4); hold on
+plot(x,sloss,'color',cmap(2,:),'linewidth',1.4); hold on
+set(gca,'ticklength',[0 0])
+xlim([0 5])
+ylim([0 .4])
 
 %% LME
 

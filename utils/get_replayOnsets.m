@@ -47,7 +47,7 @@ for trl = 1:nTrls
         end
         [bestamp,bestlag] = max(TM(:,2:end),[],2);
         theseonsets(:,t) = TM(:,1) > threshold & bestamp > threshold;
-        thisseqevidence(:,t) = TM(:,1) + bestamp;
+        thisseqevidence(:,t) = TM(:,1) .* bestamp; %TM(:,1) + bestamp;
     end
     seqevidence{trl} = thisseqevidence;
     
