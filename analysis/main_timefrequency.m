@@ -28,12 +28,6 @@ N = length(subjects);
 addpath('D:\Toolboxes\fieldtrip-20191119')
 ft_defaults
 
-% Replay onsets
-lagrange = 20:10:90; % lags at which to look for onsets (in ms)
-trainTimes = 0:10:300; % in ms
-
-load('D:\2020_RiskyReplay\data\meg\replay\withoutintercept\optimised_times.mat'); % get best classifier training times per participant
-
 %% Overall power spectra throughout planning period
 
 % Fs = 600;
@@ -157,33 +151,32 @@ load('D:\2020_RiskyReplay\data\meg\replay\withoutintercept\optimised_times.mat')
 
 %% Time-frequency
 
+wavelets = [3 5 7 9 11];
+
 for s = 1:N
     
 %     % Compute here
 %     directories = struct();
 %     directories.dir_meg = dir_meg;
 %     directories.dir_behav = dir_behav;
-%     directories.dir_classifiers = dir_classifiers;
 %     directories.dir_save = 'D:\2020_RiskyReplay\data\meg\timefrequency';
 %     
-%     for w = [3 5 7 9 11]
-%         compute_timefrequency(subjects{s},optimised_times(s),directories,w);
+%     for w = wavelets
+%         compute_timefrequency(subjects{s},directories,w);
 %     end
     
-    % OR make jobs for cluster
+    % make jobs for cluster
     directories = struct();
     directories.dir_meg = '~/Scratch/2020_RiskyReplay/data/meg';
     directories.dir_behav = '~/Scratch/2020_RiskyReplay/data/behav';
-    directories.dir_classifiers = '~/Scratch/2020_RiskyReplay/data/meg/classifiers';
     directories.dir_save = '~/Scratch/2020_RiskyReplay/data/meg/timefrequency';
     
     subject = subjects{s};
-    optimised_time = optimised_times(s);
-    for w = [3 5 7 9 11]
+    for w = wavelets
         waveletwidth = w;
         filename = [subjects{s} '_w' num2str(w) '_tf-data.mat'];
-        save(fullfile(dir_batch,filename),'directories','subject','optimised_time','waveletwidth');
-        generate_jobs_timefrequency(['~/Scratch/2020_RiskyReplay/scripts/',filename]);
+        save(fullfile(dir_batch,filename),'directories','subject','waveletwidth');
+        generate_jobs_timefrequency(['~/Scratch/2020_RiskyReplay/scripts/',filename],'holly');
     end
 end
 

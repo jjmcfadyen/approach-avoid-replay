@@ -6,6 +6,6 @@ ft_defaults;
 
 disp(['Loading ' filename])
 load(filename);
-compute_timefrequency(subject,optimised_time,directories,waveletwidth);
+compute_timefrequency(subject,directories,waveletwidth);
 
 end

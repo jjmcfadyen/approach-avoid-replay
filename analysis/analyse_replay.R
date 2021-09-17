@@ -54,6 +54,10 @@ cleandata <- function(d) {
     d$OverallBlock[d$Practice==0] <- d$Block[d$Practice==0]
   }
   
+  d$ExpHalf <- rep(NA,nrow(d))
+  d$ExpHalf[d$OverallBlock <= 5] <- "first"
+  d$ExpHalf[d$OverallBlock > 5] <- "second"
+  
   d <- d %>%
     group_by(Subject,OverallBlock) %>%
     mutate(BlockAcc=mean(Acc=="correct")) %>%
@@ -61,6 +65,24 @@ cleandata <- function(d) {
     mutate(SubjAcc=mean(Acc=="correct"))
   
   d <- d %>% filter(RewProb!=0,RewProb!=1)
+  
+  # add in cumulative path experience
+  d$PathTransition <- rep("safe",nrow(d))
+  d$PathTransition[d$Choice==1 & d$Outcome>0] <- "rewarding"
+  d$PathTransition[d$Choice==1 & d$Outcome<0] <- "aversive"
+  
+  d <- d %>%
+    group_by(Subject,Lag) %>%
+    mutate(RewPathExp_overall = cumsum(PathTransition=="rewarding"),
+           LossPathExp_overall = cumsum(PathTransition=="aversive")) %>%
+    ungroup() %>%
+    group_by(Subject,Lag,ExpHalf) %>%
+    mutate(RewPathExp_half = cumsum(PathTransition=="rewarding"),
+           LossPathExp_half = cumsum(PathTransition=="aversive")) %>%
+    ungroup() %>%
+    group_by(Subject,Lag,OverallBlock) %>%
+    mutate(RewPathExp_block = cumsum(PathTransition=="rewarding"),
+           LossPathExp_block = cumsum(PathTransition=="aversive"))
   
   d <- as.data.frame(d)
   
@@ -79,16 +101,16 @@ pca <- prcomp(Q[,c(2,3,5,6,7,8,9)],center=TRUE,scale.=TRUE)
 eig <- summary(pca)
 PC <- as.data.frame(pca$x)
 
-# scree plot
-screeplot(pca,type="l")
-abline(h=1,col="red",lty=5)
-
-# correlation matrix
-library(ggcorrplot)
-C <- cbind(Q,PC) %>% select(starts_with("score_"),starts_with("PC",ignore.case=FALSE))
-corr <- round(cor(C),1)
-p.mat <- cor_pmat(C)
-ggcorrplot(corr,type="upper",lab=FALSE)
+# # scree plot
+# screeplot(pca,type="l")
+# abline(h=1,col="red",lty=5)
+# 
+# # correlation matrix
+# library(ggcorrplot)
+# C <- cbind(Q,PC) %>% select(starts_with("score_"),starts_with("PC",ignore.case=FALSE))
+# corr <- round(cor(C),1)
+# p.mat <- cor_pmat(C)
+# ggcorrplot(corr,type="upper",lab=FALSE)
 
 
 addQ <- function(d,Q){
@@ -113,25 +135,25 @@ addQ <- function(d,Q){
 
 d <- addQ(d,Q)
 
-# Plot correlations
-pd <- cbind(Q,PC) %>%
-  gather(PCAnum,PCAval,PC1:PC2)
-  
-p1 <- ggplot(data=pd,aes(x=score_IUS,y=PCAval,group=PCAnum)) + 
-  geom_point() + 
-  geom_smooth(method=lm) + 
-  facet_wrap(~PCAnum) + theme_classic() + 
-  coord_cartesian(xlim=c(10,55)) + scale_x_continuous(breaks=seq(10,55,5))
-
-ggplot(data=pd,aes(x=score_worry,y=PCAval,group=PCAnum)) + 
-  geom_point() + 
-  geom_smooth(method=lm) + 
-  facet_wrap(~PCAnum) + theme_classic()
-
-ggplot(data=pd,aes(x=score_risk,y=PCAval,group=PCAnum)) + 
-  geom_point() + 
-  geom_smooth(method=lm) + 
-  facet_wrap(~PCAnum) + theme_classic()
+# # Plot correlations
+# pd <- cbind(Q,PC) %>%
+#   gather(PCAnum,PCAval,PC1:PC2)
+#   
+# p1 <- ggplot(data=pd,aes(x=score_IUS,y=PCAval,group=PCAnum)) + 
+#   geom_point() + 
+#   geom_smooth(method=lm) + 
+#   facet_wrap(~PCAnum) + theme_classic() + 
+#   coord_cartesian(xlim=c(10,55)) + scale_x_continuous(breaks=seq(10,55,5))
+# 
+# ggplot(data=pd,aes(x=score_worry,y=PCAval,group=PCAnum)) + 
+#   geom_point() + 
+#   geom_smooth(method=lm) + 
+#   facet_wrap(~PCAnum) + theme_classic()
+# 
+# ggplot(data=pd,aes(x=score_risk,y=PCAval,group=PCAnum)) + 
+#   geom_point() + 
+#   geom_smooth(method=lm) + 
+#   facet_wrap(~PCAnum) + theme_classic()
 
 #######################################
 # BEHAVIOURAL ANALYSIS
@@ -147,6 +169,10 @@ md$RewVal <- scale(md$RewVal,center=TRUE,scale=FALSE)
 md$LossVal <- scale(md$LossVal,center=TRUE,scale=FALSE)
 md$RewProb <- scale(md$RewProb,center=TRUE,scale=FALSE)
 
+md$RewPathExp_block <- scale(md$RewPathExp_block,center=TRUE,scale=FALSE)
+md$LossPathExp_block <- scale(md$LossPathExp_block,center=TRUE,scale=FALSE)
+md$DiffPathExp <- scale(md$RewPathExp_block - md$LossPathExp_block,center=TRUE,scale=FALSE)
+
 m0 <- glmer(Choice ~ EV + Certainty + RT + (1|Subject),
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
@@ -156,6 +182,20 @@ m1 <- glmer(Choice ~ RewVal*LossVal*RewProb + Certainty + RT + (1|Subject),
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m1)
+
+
+
+
+m2 <- glmer(Choice ~ RewPathExp_block*LossPathExp_block + RewVal*LossVal*RewProb + Certainty + RT + (1|Subject),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m2)
+
+m3 <- glmer(Choice ~ DiffPathExp + RewVal*LossVal*RewProb + Certainty + RT + (1|Subject),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m3)
+
 
 p1 <- interact_plot(m1,pred=RewProb,modx=RewVal,modx.values=quantile(md$RewVal,c(.05,.5,.95)),
               interval=TRUE,vary.lty=FALSE) + 
@@ -233,10 +273,8 @@ anova(m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m12)
 # REPLAY ANALYSIS (VALUE)
 #######################################
 
-md <- filter(d,Lag>10,Lag<100)
-
 # Rearrange so that replay is spread out across rows instead of columns
-md <- md %>%
+md <- d %>%
   gather(Replay_type, Sequenceness, c(Replay_rewarding:Replay_differential,Replay_average), factor_key=TRUE) %>%
   mutate(Replay_type=gsub("Replay_","",Replay_type))
 md$Replay_type <- as.factor(md$Replay_type)
@@ -249,6 +287,10 @@ md$PathProb <- rep(NA,nrow(md))
 md$PathProb[md$Replay_type=="rewarding"] <- md$RewProb[md$Replay_type=="rewarding"]
 md$PathProb[md$Replay_type=="aversive"] <- round(1-md$RewProb[md$Replay_type=="aversive"],1)
 
+md$PathCertainty <- md$PathProb
+md$PathCertainty[which(md$PathProb==0.1)] <- rep(0.9,sum(md$PathProb==0.1,na.rm=TRUE))
+md$PathCertainty[which(md$PathProb==0.3)] <- rep(0.7,sum(md$PathProb==0.1,na.rm=TRUE))
+
 md$PathNum <- rep(NA,nrow(md))
 md$PathNum[md$Replay_type=="rewarding" & md$nV_1>md$nV_2] <- 1
 md$PathNum[md$Replay_type=="rewarding" & md$nV_1<md$nV_2] <- 2
@@ -256,48 +298,152 @@ md$PathNum[md$Replay_type=="aversive" & md$nV_1<md$nV_2] <- 1
 md$PathNum[md$Replay_type=="aversive" & md$nV_1>md$nV_2] <- 2
 md$PathNum <- as.factor(md$PathNum)
 
-md <- md %>%
-  filter(Replay_type=="rewarding" | Replay_type=="aversive")
+md$PathExp <- rep(NA,nrow(md))
+md$PathExp[md$Replay_type=="rewarding"] <- md$RewPathExp_block[md$Replay_type=="rewarding"]
+md$PathExp[md$Replay_type=="aversive"] <- md$LossPathExp_block[md$Replay_type=="aversive"]
+md$PathExp <- log(md$PathExp+1)
 
-md <- md %>%
-  filter(Lag>10,Lag<100) %>%
-  group_by(Subject,ExpTrial,PathNum) %>%
-  mutate(Sequenceness = mean(Sequenceness)) %>%
-  filter(Lag==60)
+md$PathRecency <- rep(NA,nrow(md))
+md$PathRecency[md$Replay_type=="rewarding"] <- md$RewPathRecency_block[md$Replay_type=="rewarding"]
+md$PathRecency[md$Replay_type=="aversive"] <- md$LossPathRecency_block[md$Replay_type=="aversive"]
+md$PathRecency <- log(md$PathRecency+1)
 
-# md <- md %>%
-#   group_by(Subject) %>%
-#   mutate(outliers = abs(scale(Sequenceness)) > 3) %>%
-#   filter(outliers==0)
-
-md <- as.data.frame(md)
-
-# Make models
-md$PathVal <- scale(md$PathVal,center=TRUE,scale=FALSE)
-md$PathProb <- scale(md$PathProb,center=TRUE,scale=FALSE)
-
-md$PathVal <- scale(md$PathVal,center=TRUE,scale=FALSE)
-md$PathProb <- scale(md$PathProb,center=TRUE,scale=FALSE)
-md$RewProb <- scale(md$RewProb,center=TRUE,scale=FALSE)
+md$DiffPathExp <- md$RewPathExp_block - md$LossPathExp_block
 
 md$Choice <- as.factor(md$Choice)
 
-m0 <- lmer(Sequenceness ~ Replay_type*Choice + RT + Certainty + (1|Subject/ExpTrial),
+md <- filter(md,
+             Lag>10,Lag<100,
+             Replay_type=="rewarding" | Replay_type=="aversive")
+
+# md <- md %>%
+#   group_by(Subject,ExpTrial) %>%
+#   mutate(AvSequenceness=mean(Sequenceness)) %>%
+#   ungroup() %>%
+#   mutate(Outlier=abs(scale(AvSequenceness))>3)
+# md <- filter(md,!Outlier)
+
+md$PathExp <- scale(md$PathExp,center=TRUE,scale=FALSE)
+md$DiffPathExp <- scale(md$DiffPathExp,center=TRUE,scale=FALSE)
+md$PathVal <- scale(md$PathVal,center=TRUE,scale=FALSE)
+md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
+md$PathProb <- scale(md$PathProb,center=TRUE,scale=FALSE)
+md$PathVal <- scale(md$PathVal,center=TRUE,scale=FALSE)
+md$PathRecency <- scale(md$PathRecency,center=TRUE,scale=FALSE)
+
+# # get path experience
+# m0 <- lmer(Sequenceness ~ Replay_type + RT + (1|Subject/Lag),
+#             data=md, REML=FALSE,
+#             control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+# summary(m0)
+# 
+# m1 <- lmer(Sequenceness ~ Replay_type*Choice + RT + (1|Subject/Lag),
+#            data=md, REML=FALSE,
+#            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+# summary(m1)
+# 
+# 
+# 
+# m2 <- lmer(Sequenceness ~ PathExp*Replay_type*Choice + RT + (1|Subject/Lag),
+#            data=md, REML=FALSE,
+#            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+# summary(m2)
+# 
+# pred <- jtools::make_predictions(m2,pred="PathExp",
+#                            at=list(Replay_type=unique(md$Replay_type),
+#                                                  Choice=unique(md$Choice))) %>%
+#         mutate(semupper=Sequenceness+((ymax-ymin)/3.96),
+#                semlower=Sequenceness-((ymax-ymin)/3.96))
+# 
+# ggplot(pred,aes(x=PathExp,y=Sequenceness,group=Replay_type,color=Replay_type,fill=Replay_type)) + 
+#   geom_ribbon(aes(ymin=semlower,ymax=semupper),alpha=.2,color=NA) + 
+#   geom_line(size=1) + 
+#   facet_wrap(~Choice) + 
+#   theme_classic() + 
+#   coord_cartesian(xlim=c(-1,1.5),ylim=c(-0,0.045)) + 
+#   scale_y_continuous(breaks=seq(-0.005,0.045,0.005)) + 
+#   scale_fill_manual(values=c("#FF0074","#00FF9B")) + 
+#   scale_color_manual(values=c("#FF0074","#00FF9B"))
+
+# effect of path probability
+mA <- lmer(Sequenceness ~ PathProb*Choice + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(mA)
+
+pred <- jtools::make_predictions(mA,pred="PathProb",
+                                 at=list(Choice=unique(md$Choice))) %>%
+  mutate(semupper=Sequenceness+((ymax-ymin)/3.96),
+         semlower=Sequenceness-((ymax-ymin)/3.96))
+
+ggplot(pred,aes(x=PathProb,y=Sequenceness,group=Choice)) + 
+  geom_ribbon(aes(ymin=semlower,ymax=semupper),alpha=.2,color=NA) + 
+  geom_line(size=1) + 
+  facet_wrap(~Choice) + 
+  theme_classic() + 
+  coord_cartesian(ylim=c(-0,0.045)) + 
+  scale_y_continuous(breaks=seq(-0.005,0.045,0.005)) + 
+  scale_fill_manual(values=c("#000000")) + 
+  scale_color_manual(values=c("#000000"))
+
+# effect of path recency (higher numbers = experienced longer ago)
+m0 <- lmer(Sequenceness ~ PathRecency*Replay_type + RT + (1|Subject/Lag),
            data=md, REML=TRUE,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-
 summary(m0)
-cat_plot(m0,pred=Choice,modx=Replay_type,interval=TRUE)
 
-emmeans(m0,pairwise~Replay_type*Choice)
+pred <- jtools::make_predictions(m0,pred="PathRecency",
+                                 at=list(Replay_type=unique(md$Replay_type))) %>%
+  mutate(semupper=Sequenceness+((ymax-ymin)/3.96),
+         semlower=Sequenceness-((ymax-ymin)/3.96))
 
-# Plot raw data
-pd <- md %>%
-  group_by(Subject,Replay_type,Choice) %>%
-  summarise(Sequenceness = mean(Sequenceness)) %>%
-  as.data.frame()
+ggplot(pred,aes(x=PathRecency,y=Sequenceness,group=Replay_type,color=Replay_type,fill=Replay_type)) + 
+  geom_ribbon(aes(ymin=semlower,ymax=semupper),alpha=.2,color=NA) + 
+  geom_line(size=1) + 
+  theme_classic() + 
+  coord_cartesian(xlim=c(-0.6,1.6),ylim=c(-0,0.03)) + 
+  scale_x_continuous(breaks=seq(-0.6,1.6,0.3)) + 
+  scale_y_continuous(breaks=seq(0,0.03,0.01)) + 
+  scale_fill_manual(values=c("#FF0074","#00FF9B")) + 
+  scale_color_manual(values=c("#FF0074","#00FF9B"))
 
-write.csv(pd,"replay_path_value_choice.csv")
+# compare reward & loss paths
+m0 <- lmer(Sequenceness ~ Replay_type + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m0)
+
+m1 <- lmer(Sequenceness ~ Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m1)
+
+cat_plot(m1,pred=Choice,modx=Replay_type)
+emmeans(m1,pairwise~Choice*Replay_type)
+
+
+# compare to rescorla-wagner learned value
+alpha = 5  # 1, 3, 5, 7, or 9
+
+md$RS_pathval <- rep(NA,nrow(md))
+md$RS_pathval[md$PathNum==1] <- select(md[md$PathNum==1,],contains(paste("RW_a",alpha,"_path1",sep="")))[,1]
+md$RS_pathval[md$PathNum==2] <- select(md[md$PathNum==2,],contains(paste("RW_a",alpha,"_path2",sep="")))[,1]
+
+md$RS_replay_type <- rep(NA,nrow(md))
+md$RS_replay_type[md$RS_pathval>0] <- "rewarding"
+md$RS_replay_type[md$RS_pathval<1] <- "aversive"
+
+m1 <- lmer(Sequenceness ~ PathVal*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m1)
+
+m2 <- lmer(Sequenceness ~ RS_replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m2)
+
+anova(m1,m2)
 
 #######################################
 # REPLAY ANALYSIS (CHOICE)
@@ -357,105 +503,167 @@ md <- d %>%
 #   mutate(outliers = any(zReplay>3)) %>%
 #   filter(outliers==FALSE)
 
+md$BinDiffReplay <- md$Replay_differential > 0
+md$BinDiffReplay[md$Replay_differential>0] <- rep("rewarding",sum(md$Replay_differential>0))
+md$BinDiffReplay[md$Replay_differential<0] <- rep("aversive",sum(md$Replay_differential<0))
+
+# md <- md %>%
+#   group_by(Subject,ExpTrial) %>%
+#   mutate(AvSequenceness=mean(Replay_differential)) %>%
+#   ungroup() %>%
+#   mutate(Outlier=abs(scale(AvSequenceness))>3)
+# md <- filter(md,!Outlier)
+
+md$origEV <- md$EV
 md$EV <- scale(md$EV,center=TRUE,scale=FALSE)
-md$Replay_differential <- scale(md$Replay_differential,center=TRUE,scale=FALSE)
-md$Replay_average <- scale(md$Replay_average,center=TRUE,scale=FALSE)
+md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
+# md$Replay_differential <- scale(md$Replay_differential,center=TRUE,scale=FALSE)
+# md$Replay_average <- scale(md$Replay_average,center=TRUE,scale=FALSE)
+md$Replay_rewarding <- scale(md$Replay_rewarding,center=TRUE,scale=FALSE)
+md$Replay_aversive <- scale(md$Replay_aversive,center=TRUE,scale=FALSE)
 md$RewVal <- scale(md$RewVal,center=TRUE,scale=FALSE)
 md$LossVal <- scale(abs(md$LossVal),center=TRUE,scale=FALSE)
 md$RewProb <- scale(md$RewProb,center=TRUE,scale=FALSE)
+md$DiffPathExp <- scale(md$RewPathExp_block - md$LossPathExp_block,center=TRUE,scale=FALSE)
 
-lm0 <- lmer(Replay_differential ~ Choice + RT + Certainty + Replay_average + (1|Subject/Lag),
-            data=md, REML=TRUE,
-            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-
-lm1 <- lmer(Replay_differential ~ RewVal*LossVal*RewProb + RT + Certainty + Replay_average + (1|Subject/Lag),
-            data=md, REML=TRUE,
-            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-
-summary(lm1)
-
-
-g <- interact_plot(lm1,pred=RewVal,modx=LossVal,modx.values=quantile(md$LossVal,c(.25,.5,.75)),
-              interval=TRUE,vary.lty=FALSE,colors="Reds") + 
-  theme_classic() + 
-  coord_cartesian(ylim=c(-0.02,0.03)) + 
-  scale_y_continuous(breaks=seq(-0.02,0.03,0.01))
-
-ggsave("rewval_replay.svg",g)
-
-
-g <- jtools::effect_plot(lm1,pred=RewProb,interval=TRUE) + 
-  theme_classic() + 
-  coord_cartesian(ylim=c(-0.02,0.03)) + 
-  scale_y_continuous(breaks=seq(-0.02,0.03,0.01))
-ggsave("rewprob_replay.svg",g)
-
-
-
+# lm0 <- lmer(Replay_differential ~ Choice + RT + Certainty + Replay_average + (1|Subject/Lag),
+#             data=md, REML=TRUE,
+#             control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+# 
+# lm1 <- lmer(Replay_differential ~ RewVal*LossVal*RewProb + RT + Certainty + Replay_average + (1|Subject/Lag),
+#             data=md, REML=TRUE,
+#             control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+# 
+# summary(lm1)
+# 
+# 
+# g <- interact_plot(lm1,pred=RewVal,modx=LossVal,modx.values=quantile(md$LossVal,c(.25,.5,.75)),
+#               interval=TRUE,vary.lty=FALSE,colors="Reds") + 
+#   theme_classic() + 
+#   coord_cartesian(ylim=c(-0.02,0.03)) + 
+#   scale_y_continuous(breaks=seq(-0.02,0.03,0.01))
+# 
+# ggsave("rewval_replay.svg",g)
+# 
+# 
+# g <- jtools::effect_plot(lm1,pred=RewProb,interval=TRUE) + 
+#   theme_classic() + 
+#   coord_cartesian(ylim=c(-0.02,0.03)) + 
+#   scale_y_continuous(breaks=seq(-0.02,0.03,0.01))
+# ggsave("rewprob_replay.svg",g)
 
 
-m <- glmer(Choice ~ Replay_differential + Replay_average + (1|Subject/Lag),
+
+
+
+m0 <- glmer(Choice ~ EV + Certainty + RT + (1|Subject/Lag),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m1 <- glmer(Choice ~ Replay_differential + RT + (1|Subject/Lag),
            data=md, family="binomial",
            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
-
-
-m0 <- glmer(Choice ~ EV + Certainty + (1|Subject/Lag),
+m2 <- glmer(Choice ~ EV*Replay_differential + Certainty + RT + (1|Subject/Lag),
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
-m1 <- glmer(Choice ~ EV + Certainty + Replay_average + (1|Subject/Lag),
+
+
+m3 <- glmer(Choice ~ EV*Replay_rewarding + Certainty + RT + (1|Subject/Lag),
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
-m2 <- glmer(Choice ~ EV*Replay_differential + Certainty + Replay_average + (1|Subject/Lag),
+m4 <- glmer(Choice ~ EV*Replay_aversive + Certainty + RT + (1|Subject/Lag),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m5 <- glmer(Choice ~ EV*Replay_rewarding+ EV*Replay_aversive + Certainty + RT + (1|Subject/Lag),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m6 <- glmer(Choice ~ EV*Replay_rewarding*Replay_aversive + Certainty + RT + (1|Subject/Lag),
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 anova(m0,m1)
 summary(m1)
 
+# get indifference points
+pred <- jtools::make_predictions(m2,pred="EV")
+pred$EV[abs(pred$Choice - 0.5) == min(abs(pred$Choice - 0.5))]
+
+pred <- jtools::make_predictions(m2,pred="EV",
+        at=list(Replay_differential=quantile(md$Replay_differential,c(.05,.95))))
+idx1 <- pred$Replay_differential==min(pred$Replay_differential)
+idx2 <- pred$Replay_differential==max(pred$Replay_differential)
+pred$Replay_differential[idx1] <- rep("aversive",sum(idx1))
+pred$Replay_differential[idx2] <- rep("rewarding",sum(idx2))
+
+tmp <- pred[idx1,]
+tmp$EV[abs(tmp$Choice - 0.5) == min(abs(tmp$Choice - 0.5))]
+
+tmp <- pred[idx2,]
+tmp$EV[abs(tmp$Choice - 0.5) == min(abs(tmp$Choice - 0.5))]
+                                                                     
+# estimated means
+pred <- jtools::make_predictions(m2,pred="Replay_differential")
+mean(pred$Replay_differential[pred$Choice>0.5])
+
+
+
+                                                                     
 acf(resid(m1))
 durbinWatsonTest(resid(m1)) # values close to 2 indicate no autocorrelation (<2 = positive, >2 = negative) - rule of thumb is 1.5 to 2.5 is fine
 
 
 
-evplots <- function(pred) {
-  
-  pred_choice <- pred %>%
-    select(Choice,Replay_differential,EV) %>%
-    spread(Replay_differential,Choice)
-  names(pred_choice) <- c("EV","Aversive_Choice","Rewarding_Choice")
-  
-  pred_ymin <- pred %>%
-    select(ymin,Replay_differential,EV) %>%
-    spread(Replay_differential,ymin)
-  names(pred_ymin) <- c("EV","Aversive_ymin","Rewarding_ymin")
-  
-  pred_ymax <- pred %>%
-    select(ymax,Replay_differential,EV) %>%
-    spread(Replay_differential,ymax)
-  names(pred_ymax) <- c("EV","Aversive_ymax","Rewarding_ymax")
-  
-  pred <- cbind(pred_choice,pred_ymin[,2:3],pred_ymax[,2:3])
-  
-  pred$Aversive_yminse <- pred$Aversive_Choice - (pred$Aversive_ymax-pred$Aversive_ymin)/3.96
-  pred$Aversive_ymaxse <- pred$Aversive_Choice + (pred$Aversive_ymax-pred$Aversive_ymin)/3.96
-  
-  pred$Rewarding_yminse <- pred$Rewarding_Choice - (pred$Rewarding_ymax-pred$Rewarding_ymin)/3.96
-  pred$Rewarding_ymaxse <- pred$Rewarding_Choice + (pred$Rewarding_ymax-pred$Rewarding_ymin)/3.96
-  
-  
-  return(pred)
-}
+# evplots <- function(pred) {
+#   
+#   pred_choice <- pred %>%
+#     select(Choice,Replay_differential,EV) %>%
+#     spread(Replay_differential,Choice)
+#   names(pred_choice) <- c("EV","Aversive_Choice","Rewarding_Choice")
+#   
+#   pred_ymin <- pred %>%
+#     select(ymin,Replay_differential,EV) %>%
+#     spread(Replay_differential,ymin)
+#   names(pred_ymin) <- c("EV","Aversive_ymin","Rewarding_ymin")
+#   
+#   pred_ymax <- pred %>%
+#     select(ymax,Replay_differential,EV) %>%
+#     spread(Replay_differential,ymax)
+#   names(pred_ymax) <- c("EV","Aversive_ymax","Rewarding_ymax")
+#   
+#   pred <- cbind(pred_choice,pred_ymin[,2:3],pred_ymax[,2:3])
+#   
+#   pred$Aversive_yminse <- pred$Aversive_Choice - (pred$Aversive_ymax-pred$Aversive_ymin)/3.96
+#   pred$Aversive_ymaxse <- pred$Aversive_Choice + (pred$Aversive_ymax-pred$Aversive_ymin)/3.96
+#   
+#   pred$Rewarding_yminse <- pred$Rewarding_Choice - (pred$Rewarding_ymax-pred$Rewarding_ymin)/3.96
+#   pred$Rewarding_ymaxse <- pred$Rewarding_Choice + (pred$Rewarding_ymax-pred$Rewarding_ymin)/3.96
+#   
+#   
+#   return(pred)
+# }
 
-pred <- jtools::make_predictions(m0,
+pred <- jtools::make_predictions(m2,
                                  pred="EV",modx="Replay_differential",
                                  at=list(Replay_differential=quantile(d$Replay_differential,c(.05,.5,.95))))
-pred <- evplots(pred)
-write.csv(pred,"ev_replay_pred.csv")
+names(pred)[names(pred)=="Replay_differential"] <- "Replay"
+write.csv(pred,"ev_replay_differential.csv")
 
+pred <- jtools::make_predictions(m5,
+                                 pred="EV",modx="Replay_rewarding",
+                                 at=list(Replay_rewarding=quantile(d$Replay_rewarding,c(.05,.5,.95))))
+names(pred)[names(pred)=="Replay_rewarding"] <- "Replay"
+write.csv(pred,"ev_replay_reward.csv")
 
+pred <- jtools::make_predictions(m5,
+                                 pred="EV",modx="Replay_aversive",
+                                 at=list(Replay_aversive=quantile(d$Replay_aversive,c(.05,.5,.95))))
+names(pred)[names(pred)=="Replay_aversive"] <- "Replay"
+write.csv(pred,"ev_replay_loss.csv")
 
 
 interact_plot(m1,data=md,pred=EV,modx=Replay_differential,modx.values=quantile(d$Replay_differential,c(.05,.5,.95)),
@@ -479,7 +687,9 @@ ggplot(data=pd,aes(x=Choice,y=Replay,group=Subject,color=Choice)) +
 write.csv(pd,"choice_replay.csv")
 
 
-
+m1 <- glmer(Choice ~ EV*Replay_differential + Certainty + RT + (1|Subject/Lag),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 m2 <- glmer(Choice ~ EV*Replay_differential + PCA1 + Certainty + (1|Subject/Lag),
             data=md, family="binomial",
@@ -513,10 +723,25 @@ m9 <- glmer(Choice ~ EV*Replay_differential*PCA1 + EV*Replay_differential*PCA2 +
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
-anova(m0,m1,m2,m3,m4,m5,m6,m7,m8,m9)
+anova(m1,m2,m3,m4,m5,m6,m7,m8,m9)
 
 acf(resid(m9))
 durbinWatsonTest(resid(m9))
+
+
+pred <- jtools::make_predictions(m9,
+                                 pred="EV",modx="Replay_differential",mod2="PCA1",
+                                 at=list(Replay_differential=quantile(md$Replay_differential,c(.05,.5,.95)),
+                                         PCA1=quantile(md$PCA1,c(.05,.95))))
+write.csv(pred,"ev_replay_PCA1.csv")
+
+pred <- jtools::make_predictions(m9,
+                                 pred="EV",modx="Replay_differential",mod2="PCA2",
+                                 at=list(Replay_differential=quantile(md$Replay_differential,c(.05,.5,.95)),
+                                         PCA2=quantile(md$PCA2,c(.05,.95))))
+write.csv(pred,"ev_replay_PCA2.csv")
+
+
 
 
 

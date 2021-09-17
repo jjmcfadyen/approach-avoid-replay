@@ -8,6 +8,9 @@ if nargin == 1
     if ~isfield(opts,'withinSeq') % 1 to 3 or 4 to 6
         opts.withinSeq = false;
     end
+    if ~isfield(opts,'removeMirror') % if agnostic about the WITHIN-path transitions, remove duplicates
+        opts.removeMirror = false;
+    end
 end
 
 %% Parameters
@@ -54,6 +57,41 @@ for perm = 1:size(U,1)
     end
 end
 U = U(ridx == 0,:);
+
+% Remove mirrored paths
+if opts.removeMirror
+    
+    TM = nan(size(U,1),size(transitions,1),size(transitions,2));
+    for perm = 1:size(U,1)
+        thisPerm = U(perm,:);
+        for t = 1:size(transitions,1)
+            TM(perm,t,:) = thisPerm([transitions(t,1),transitions(t,2)]);
+        end
+    end
+    
+    duplicates = [];
+    for perm1 = 1:size(U,1)
+        for perm2 = 1:size(U,1)
+            if perm1 ~= perm2
+                t1 = squeeze(TM(perm1,:,:));
+                t2 = squeeze(TM(perm2,:,:));
+                for r = 1:size(t1,1)
+                    t1(r,:) = sort(t1(r,:));
+                    t2(r,:) = sort(t2(r,:));
+                end
+                t1 = squash(sortrows(t1));
+                t2 = squash(sortrows(t2));
+                if all(t1==t2)
+                    duplicates = [duplicates; sort([perm1 perm2])];
+                end
+            end
+        end
+    end
+    duplicates = unique(duplicates,'rows');
+    
+    U = U(unique(duplicates(:,1)),:);
+    
+end
 
 % Add actual transitions back in
 U = [1:nStates; sortrows(U)];

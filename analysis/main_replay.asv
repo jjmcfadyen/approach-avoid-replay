@@ -685,8 +685,7 @@ for s = 1:thisN
     
     % Put in Y variable
     Y{s} = behav(:,ismember(behav.Properties.VariableNames,...
-        {'Practice','Block','Trial','Forced','ExpTrial','P','nV_1','nV_2','EV','Choice','RT','Acc','Outcome',...
-        'Path1Type','Path2Type','RewPathRecency_block','LossPathRecency_block','RewPathRecency_half','LossPathRecency_half'})); % just take the most relevant columns, to save space
+        {'Practice','Block','Trial','Forced','ExpTrial','P','nV_1','nV_2','EV','Choice','RT','Acc','Outcome',..'Path1Type','Path2Type','RewPathRecency_block','LossPathRecency_block','RewPathRecency_half','LossPathRecency_half'})); % just take the most relevant columns, to save space
     
     % Add learning of path value
     alphas = 0.1:0.2:0.9;

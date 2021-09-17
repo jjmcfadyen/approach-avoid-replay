@@ -710,13 +710,7 @@ x = mean(x);
 
 m = mean(y);
 sem = std(y)/sqrt(size(y,1));
-upper = m+sem;
-lower = m-sem;
 
-figure
-patch([x fliplr(x)],[upper fliplr(lower)],'k','facealpha',.2,'edgecolor','none'); hold on
-plot(x,m,'k','linewidth',1.4); hold on
-plot(x([1 end]),[0 0],'k:');
 
 %% Beamforming in DAiSS toolbox (on work PC)
 

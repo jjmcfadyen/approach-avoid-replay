@@ -1,25 +1,31 @@
-function generate_jobs_timefrequency(filename)
+function generate_jobs_timefrequency(filename,cluster_type)
 % This script gets the template and duplicates them, according to the names
 % of the 'opts' files in 'batch'
 
 %% Settings
 
 % Directories on cluster
-datadir = '/home/skgtjm6/Scratch';
-scriptdir = '~/Scratch/2020_RiskyReplay/scripts';
+switch cluster_type
+    case 'myriad'
+        datadir = '/home/skgtjm6/Scratch';
+        scriptdir = '~/Scratch/2020_RiskyReplay/scripts';
+    case 'holly'
+        datadir = '/data/holly-host/jmcfadyen/2020_RiskyReplay/meg';
+        scriptdir = '/data/holly-host/jmcfadyen/2020_RiskyReplay';
+end
 
 % Directories on work PC
 dir_batch = 'D:\2020_RiskyReplay\approach-avoid-replay\analysis\batch';
 
 % Job settings
-timechar = '3:30:00'; % max job duration (hours : minutes : seconds)
+timechar = '2:30:00'; % max job duration (hours : minutes : seconds)
 functionName = 'cluster_timefrequency'; % the function that will be called on the cluster
 RAM = '8G'; % RAM allocated to each job
 
 %% Read in jobs
 
 % Read in template file
-fid = fopen(fullfile(dir_batch,'template_timefrequency.sh'));
+fid = fopen(fullfile(dir_batch,['template_timefrequency_' cluster_type '.sh']));
 tline = fgetl(fid);
 template = {};
 while ischar(tline)
@@ -45,7 +51,7 @@ for i = 1:length(template) % for each line...
     
     % see if there are any tags to be replaced with variables
     L = strrep(L,'[TIME]',timechar);
-    L = strrep(L,'[RAM]',['mem=' RAM]);
+    L = strrep(L,'[RAM]',RAM);
     L = strrep(L,'[DATADIR]',datadir);
     L = strrep(L,'[SCRIPTDIR]',scriptdir);
 

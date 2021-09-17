@@ -37,45 +37,42 @@ subjects = {'012882'
     '989833'};
 N = length(subjects);
 
-excludeSubjects = subjects([10 11:N]); %{'263098','680913'};
-thesesubjects = subjects(~ismember(subjects,excludeSubjects));
-thisN = length(thesesubjects);  
-
 %% Group-level (beamforming)
 
 oat = [];
 
 % Subjects
-for s = 1:thisN
+for s = 1:N
 
     r = -1;
     while true
         r = r+1;
-        thisfile = fullfile('/data/holly-host/jmcfadyen/2020_RiskyReplay/meg/beamforming',[thesesubjects{s} '.oat'],...
+        thisfile = fullfile('/data/holly-host/jmcfadyen/2020_RiskyReplay/meg/beamforming',[subjects{s} '.oat'],...
                     'subject1_wholebrain_first_level_sub_level.mat');
         if exist(thisfile)
             break
         end
         if r>11
-            error(['No file found for ' subjects{s}]);
+            warning(['No file found for ' subjects{s}]);
+            break
         end
     end
 
     if s==1
         disp(['Loading OAT for ' subjects{s} ' to use as template...'])
-        oatin = load(fullfile('/data/holly-host/jmcfadyen/2020_RiskyReplay/meg/beamforming',[thesesubjects{s} '.oat'],...
+        oatin = load(fullfile('/data/holly-host/jmcfadyen/2020_RiskyReplay/meg/beamforming',[subjects{s} '.oat'],...
                     'oat.mat'));
         oat = oatin.oat;
     end
     
-    oat.subject_level.results_fnames{s} = thisfile;
-    oat.subject_level.session_index_list{s} = oat.subject_level.session_index_list{1};
-    oat.subject_level.subjects_to_do(s) = s;
+%     oat.subject_level.results_fnames{s} = thisfile;
+%     oat.subject_level.session_index_list{s} = oat.subject_level.session_index_list{1};
+%     oat.subject_level.subjects_to_do(s) = s;
 
 end
 
 oat.group_level.name='group_level';
-oat.group_level.subjects_to_do = 1:thisN;
+oat.group_level.subjects_to_do = 1:N;
 
 % Spatial and temporal averaging options
 oat.group_level.time_range          = [-0.1 0.1];
@@ -137,7 +134,8 @@ for m = 1:length(masks)
     S.group_level_cons_to_do = [1];
     [H] = oat_plot_vox_stats(S);
 
-    saveas(H,fullfile(current_dir,'plots','wholebrain_first_level_sub_level_group_level',[masks{m}(1:end-4) '_ROI.png']));
+    saveas(H,fullfile(current_dir,'plots','wholebrain_first_level_sub_level_group_level',....
+        [masks{m}(1:end-4) '_ROI.png']));
 end
 
 % % MNI coordinates
@@ -171,14 +169,35 @@ S.write_cluster_script                  = 0;
 S.time_range                            = [0 0.1];
 S.time_average                          = 1;
 
-% Run the permutations
+% Run the permutations (uses FSL's 'randomise' function)
 [gstats] = oat_cluster_permutation_testing(S);
 
-% View permutation stats
-con = S.first_level_copes_to_do(1);
-tstat = fullfile(gstats.dir,['tstat' num2str(con) '_gc1_' num2str(gstats.gridstep) 'mm.nii.gz']);
-clus_tstat = fullfile(gstats.dir,['clustere_tstat' num2str(con) '_gc1_' num2str(gstats.gridstep) 'mm.nii.gz']);
-corr_clus_tstat = fullfile(gstats.dir,['clustere_corrp_tstat' num2str(con) '_gc1_' num2str(gstats.gridstep) 'mm.nii.gz']);
+% % View permutation stats
+% con = S.first_level_copes_to_do(1);
+% tstat = fullfile(gstats.dir,['tstat' num2str(con) '_gc1_' num2str(gstats.gridstep) 'mm.nii.gz']);
+% clus_tstat = fullfile(gstats.dir,['clustere_tstat' num2str(con) '_gc1_' num2str(gstats.gridstep) 'mm.nii.gz']);
+% corr_clus_tstat = fullfile(gstats.dir,['clustere_corrp_tstat' num2str(con) '_gc1_' num2str(gstats.gridstep) 'mm.nii.gz']);
 
+% Move subject maps to do group-level statistics in SPM on work PC
+dir_save = '/data/holly-host/jmcfadyen/2020_RiskyReplay/meg/beamforming/subject_images';
+if ~exist(dir_save)
+    mkdir(dir_save)
+end
+
+for s = 1:N
+   
+    S                       = [];
+    S.oat                   = load(fullfile('/data/holly-host/jmcfadyen/2020_RiskyReplay/meg/beamforming/',...
+                                            [subjects{s} '.oat'],'subject1_wholebrain_first_level_sub_level.mat'));
+    S.oat                   = S.oat.oat;
+    S.stats_fname           = S.oat.first_level.results_fnames{1};
+    S.first_level_contrasts = [1];
+    S.resamp_gridstep       = S.oat.source_recon.gridstep;
+    S.time_range            = [0 0.1];
+    [statsdir,times,count]  = oat_save_nii_stats(S);
+    
+    
+    
+end
 
 end

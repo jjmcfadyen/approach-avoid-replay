@@ -1,10 +1,5 @@
-function thisT = compute_timefrequency(subject,optimised_time,directories,waveletwidth)
+function thisT = compute_timefrequency(subject,directories,waveletwidth)
 % directories = structure with dir_meg, dir_behav, dir_classifiers
-
-%% Settings
-
-lagrange = 20:10:90; % lags at which to look for onsets (in ms)
-trainTimes = 0:10:300; % in ms
 
 %% Compute time frequency for this subject
 
@@ -19,10 +14,6 @@ disp('==============================')
 % Load data
 load(fullfile(directories.dir_meg,['7_merged_ds-600Hz'],[subject '_task_600Hz.mat'])); % loads 'merged' variable
 data = merged;
-clear merged;
-
-load(fullfile(directories.dir_meg,['7_merged_ds-100Hz'],[subject '_task_100Hz.mat'])); % loads 'merged' variable
-lowdata = merged;
 clear merged;
 
 nTrls = length(data.trial);
@@ -45,12 +36,6 @@ for trl = 1:nTrls
     idx(trl,1) = find(behav.Practice==thispractice & behav.Block==thisblock & behav.Trial==thistrial);
 end
 behav = behav(idx,:);
-
-% Get classifier info for this subject
-[~,lambdas] = get_bestLambdas(subject,trainTimes,1);
-load(fullfile(directories.dir_classifiers,subject,['classifier_' subject '_t' num2str(optimised_time) '_n1.mat'])); % loads 'classifier'
-classifier.betas = squeeze(classifier.betas(:,:,lambdas(trainTimes==optimised_time)));
-classifier.intercepts = squeeze(classifier.intercepts(:,lambdas(trainTimes==optimised_time)));
 
 % Get maximum trial length
 trial_res = 0.01; % time step size

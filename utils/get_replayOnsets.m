@@ -1,14 +1,47 @@
-function [onsets seqevidence] = get_replayOnsets(data,classifier,lag)
+function [onsets seqevidence] = get_replayOnsets(data,classifier,lag,transitions)
 % Identify replay onsets
+
+thresholdType = 'subject'; % 'trial' for individual thresholding, or 'subject' for all trials
 
 %% Get info
 
 nStates = 6;
 nTrls = length(data.trial);
 
-transitions = [1 2; 2 3; 4 5; 5 6];
+if nargin<=3
+    transitions = [1 2; 2 3; 4 5; 5 6];
+else
+    if any(size(transitions))==1
+        transitions = [transitions(1:2);
+                       transitions(2:3);
+                       transitions(4:5);
+                       transitions(5:6)];
+    end
+end
 
 %% Get onsets
+
+if strcmp(thresholdType,'subject')
+    alltrials = [];
+    for trl = 1:nTrls
+   
+        C = classifier;
+
+        % Scale data
+        X = data.trial{trl}'; % channels x samples
+        X = X ./ prctile(abs(X(:)),95);
+
+        if any(isnan(X(:)))
+            idx = ~any(isnan(X));
+            X = X(:,idx);
+            C.betas = C.betas(:,idx);
+        end
+        
+        Y = 1 ./ (1 + exp(-(X*C.betas')));
+        alltrials = [alltrials; Y];
+    end
+    threshold = quantile(alltrials(:),.95);
+end
 
 onsets = [];
 seqevidence = cell(1,nTrls);
@@ -31,11 +64,14 @@ for trl = 1:nTrls
     % Apply classifier to get predicted data
 %     Y = normr(1 ./ (1 + exp(-(X*C.betas' + repmat(C.intercepts', [size(X,1) 1])))));
 %     Y = X*C.betas';
-    Y = normr(1 ./ (1 + exp(-(X*C.betas'))));
+%     Y = normr(1 ./ (1 + exp(-(X*C.betas'))));
+    Y = 1 ./ (1 + exp(-(X*C.betas')));
 %     Y = normalise(X*C.betas');
 
     % Get time-shifted reactivation matrix
-    threshold = quantile(Y(:),.95); % 95th percentile of overall reactivation matrix
+    if strcmp(thresholdType,'trial')
+        threshold = quantile(Y(:),.95); % 95th percentile of overall reactivation matrix
+    end
     thisseqevidence = nan(nSamples,size(transitions,1));
     theseonsets = nan(nSamples,size(transitions,1));
     for t = 1:size(transitions,1)
@@ -45,9 +81,13 @@ for trl = 1:nTrls
             lagsamples = round(lag(ilag)/1000*data.fsample); % in samples
             TM(:,ilag+1) = [Y((lagsamples+1):end,transitions(t,2)); nan(lagsamples,1)]; % reactivation of next state at this lag
         end
-        [bestamp,bestlag] = max(TM(:,2:end),[],2);
-        theseonsets(:,t) = TM(:,1) > threshold & bestamp > threshold;
-        thisseqevidence(:,t) = TM(:,1) .* bestamp; %TM(:,1) + bestamp;
+        if length(lag)>1
+            [bestamp,~] = max(TM(:,2:end),[],2);
+        else
+            bestamp = TM(:,2);
+        end
+        theseonsets(:,t) = TM(:,1) .* bestamp > threshold; %TM(:,1) > threshold & bestamp > threshold;
+        thisseqevidence(:,t) = TM(:,1) .* bestamp;
     end
     seqevidence{trl} = thisseqevidence;
     
@@ -69,8 +109,8 @@ for trl = 1:nTrls
             samplewindow = samplewindow(samplewindow>0 & samplewindow<size(binonsets_perpath,1)); % remove negative samples
             
             if path<3
-                if any(binonsets_perpath(samplewindow,path)==1)
-                    binonsets_perpath(samplewindow,path) = 0;
+                if any(binonsets_perpath(samplewindow,:)==1)
+                    binonsets_perpath(samplewindow,:) = 0;
                 end
             else
                 if any(binonsets_overall(samplewindow,:)==1)

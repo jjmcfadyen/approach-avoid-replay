@@ -1,5 +1,5 @@
 function [freq,amp,phase] = getPhase(t,s)
-% t =  time vector
+% t = time vector
 % s = signal vector
 
 Ts = mean(diff(t));                                         % Sampling Time

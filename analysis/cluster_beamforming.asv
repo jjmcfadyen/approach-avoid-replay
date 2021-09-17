@@ -48,21 +48,7 @@ oat.to_do = [1 0 0 0];
 oat = osl_run_oat(oat);
 
 oat.to_do = [0 1 0 0];
-nRuns = length(oat.source_recon.D_epoched);
-includeRun = ones(1,nRuns);
-for r = 1:nRuns
-    oat.first_level.sessions_to_do = r;
-    try
-        oat = osl_run_oat(oat);
-    catch
-        includeRun(r) = 0;
-    end
-end
-
-oat.to_do = [0 0 1 0];
-oat.first_level.sessions_to_do = find(includeRun);
-oat.subject_level.session_index_list = {find(includeRun)};
-oat = osl_run_oat(oat);
+nRuns = 
 
 % Save
 save(fullfile(oat.source_recon.dirname,'oat.mat'),'oat');
