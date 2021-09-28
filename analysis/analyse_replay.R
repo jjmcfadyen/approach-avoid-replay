@@ -376,36 +376,29 @@ pred <- jtools::make_predictions(mA,pred="PathProb",
   mutate(semupper=Sequenceness+((ymax-ymin)/3.96),
          semlower=Sequenceness-((ymax-ymin)/3.96))
 
-ggplot(pred,aes(x=PathProb,y=Sequenceness,group=Choice)) + 
+ggplot(pred,aes(x=PathProb,y=Sequenceness,group=Choice,color=Choice,fill=Choice)) + 
   geom_ribbon(aes(ymin=semlower,ymax=semupper),alpha=.2,color=NA) + 
   geom_line(size=1) + 
-  facet_wrap(~Choice) + 
   theme_classic() + 
-  coord_cartesian(ylim=c(-0,0.045)) + 
-  scale_y_continuous(breaks=seq(-0.005,0.045,0.005)) + 
-  scale_fill_manual(values=c("#000000")) + 
-  scale_color_manual(values=c("#000000"))
+  coord_cartesian(ylim=c(-0,0.04))
 
 # effect of path recency (higher numbers = experienced longer ago)
-m0 <- lmer(Sequenceness ~ PathRecency*Replay_type + RT + (1|Subject/Lag),
+m0 <- lmer(Sequenceness ~ PathRecency*Replay_type*PathProb + RT + (1|Subject/Lag),
            data=md, REML=TRUE,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 summary(m0)
 
 pred <- jtools::make_predictions(m0,pred="PathRecency",
-                                 at=list(Replay_type=unique(md$Replay_type))) %>%
+                                 at=list(Replay_type=unique(md$Replay_type),
+                                         PathProb=unique(md$PathProb))) %>%
   mutate(semupper=Sequenceness+((ymax-ymin)/3.96),
          semlower=Sequenceness-((ymax-ymin)/3.96))
 
-ggplot(pred,aes(x=PathRecency,y=Sequenceness,group=Replay_type,color=Replay_type,fill=Replay_type)) + 
-  geom_ribbon(aes(ymin=semlower,ymax=semupper),alpha=.2,color=NA) + 
-  geom_line(size=1) + 
+ggplot(pred,aes(x=PathRecency,y=Sequenceness,
+                group=Replay_type,color=PathProb)) + 
+  geom_point() + 
   theme_classic() + 
-  coord_cartesian(xlim=c(-0.6,1.6),ylim=c(-0,0.03)) + 
-  scale_x_continuous(breaks=seq(-0.6,1.6,0.3)) + 
-  scale_y_continuous(breaks=seq(0,0.03,0.01)) + 
-  scale_fill_manual(values=c("#FF0074","#00FF9B")) + 
-  scale_color_manual(values=c("#FF0074","#00FF9B"))
+  coord_cartesian(ylim=c(0,0.04))
 
 # compare reward & loss paths
 m0 <- lmer(Sequenceness ~ Replay_type + RT + (1|Subject/Lag),
@@ -723,6 +716,18 @@ m9 <- glmer(Choice ~ EV*Replay_differential*PCA1 + EV*Replay_differential*PCA2 +
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
+m10 <- glmer(Choice ~ EV*Replay_rewarding*PCA1 + EV*Replay_rewarding*PCA2 + Certainty + (1|Subject/Lag),
+             data=md, family="binomial",
+             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m11 <- glmer(Choice ~ EV*Replay_aversive*PCA1 + EV*Replay_aversive*PCA2 + Certainty + (1|Subject/Lag),
+             data=md, family="binomial",
+             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m12 <- glmer(Choice ~ EV*Replay_rewarding*Replay_aversive*PCA1 + EV*Replay_rewarding*Replay_aversive*PCA2 + Certainty + (1|Subject/Lag),
+             data=md, family="binomial",
+             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
 anova(m1,m2,m3,m4,m5,m6,m7,m8,m9)
 
 acf(resid(m9))
@@ -731,13 +736,13 @@ durbinWatsonTest(resid(m9))
 
 pred <- jtools::make_predictions(m9,
                                  pred="EV",modx="Replay_differential",mod2="PCA1",
-                                 at=list(Replay_differential=quantile(md$Replay_differential,c(.05,.5,.95)),
+                                 at=list(Replay_differential=quantile(md$Replay_differential,c(.05,.95)),
                                          PCA1=quantile(md$PCA1,c(.05,.95))))
 write.csv(pred,"ev_replay_PCA1.csv")
 
 pred <- jtools::make_predictions(m9,
-                                 pred="EV",modx="Replay_differential",mod2="PCA2",
-                                 at=list(Replay_differential=quantile(md$Replay_differential,c(.05,.5,.95)),
+                                 pred="EV",modx="Replay_differential",mod2="PCA1",
+                                 at=list(Replay_differential=quantile(md$Replay_differential,c(.05,.95)),
                                          PCA2=quantile(md$PCA2,c(.05,.95))))
 write.csv(pred,"ev_replay_PCA2.csv")
 

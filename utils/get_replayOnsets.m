@@ -1,7 +1,7 @@
 function [onsets seqevidence] = get_replayOnsets(data,classifier,lag,transitions)
 % Identify replay onsets
 
-thresholdType = 'subject'; % 'trial' for individual thresholding, or 'subject' for all trials
+thresholdType = 'trial'; % 'trial' for individual thresholding, or 'subject' for all trials
 
 %% Get info
 
@@ -64,8 +64,8 @@ for trl = 1:nTrls
     % Apply classifier to get predicted data
 %     Y = normr(1 ./ (1 + exp(-(X*C.betas' + repmat(C.intercepts', [size(X,1) 1])))));
 %     Y = X*C.betas';
-%     Y = normr(1 ./ (1 + exp(-(X*C.betas'))));
-    Y = 1 ./ (1 + exp(-(X*C.betas')));
+    Y = normr(1 ./ (1 + exp(-(X*C.betas'))));
+%     Y = 1 ./ (1 + exp(-(X*C.betas')));
 %     Y = normalise(X*C.betas');
 
     % Get time-shifted reactivation matrix
@@ -86,7 +86,7 @@ for trl = 1:nTrls
         else
             bestamp = TM(:,2);
         end
-        theseonsets(:,t) = TM(:,1) .* bestamp > threshold; %TM(:,1) > threshold & bestamp > threshold;
+        theseonsets(:,t) = TM(:,1) .* bestamp > threshold; %TM(:,1) > threshold & bestamp > threshold;   TM(:,1) .* bestamp > threshold;
         thisseqevidence(:,t) = TM(:,1) .* bestamp;
     end
     seqevidence{trl} = thisseqevidence;

@@ -54,7 +54,7 @@ lagrange = 20:10:90; % lags at which to look for onsets (in ms)
 addpath('D:\Toolboxes\spm12')
 spm('defaults','eeg')
 
-dir_save = 'D:\2020_RiskyReplay\data\meg\replay\epochs_subjecthreshold';
+dir_save = 'D:\2020_RiskyReplay\data\meg\replay\epochs_unnormalised';
 
 epochtype = 'short'; % 'short' = -100 to 150ms, 'long' = -1000 to 1000 ms
 switch epochtype
@@ -230,9 +230,12 @@ for s = 1:N
         S.D(:,1) = []; % fiducials missing for first block
     end
     replayepochs = spm_eeg_merge(S);
-    
-    replayepochs.move(fullfile(dir_save,subjects{s},['replay-epochs_all_' subjects{s} '.mat']));
 
+    if ~exist(fullfile(dir_save,'merged'))
+        mkdir(fullfile(dir_save,'merged'))
+    end
+    replayepochs.move(fullfile(dir_save,'merged',['replay-epochs_all_' subjects{s} '.mat']));
+    
     if any(contains(chantype(replayepochs),'EEG'))
         replayepochs = chantype(replayepochs,find(contains(chantype(replayepochs),'EEG')),'Other');
         replayepochs.save;
@@ -448,9 +451,17 @@ switch cluster_type
         dir_clustermeg = '/data/holly-host/jmcfadyen/2020_RiskyReplay/meg/';
 end
 dir_continuous = [dir_clustermeg '5_ICA_ds-600Hz/'];
-dir_epoch = [dir_clustermeg '8_replayepochs-600Hz_subjecthreshold/'];
+dir_epoch = [dir_clustermeg '8_replayepochs-600Hz/'];
 
-for s = 2:N
+conditionType = 'path'; % 'any' or 'path'
+switch conditionType
+    case 'any'
+        conditions = {'anyreplay_approach','anyreplay_avoid'};
+    case 'path'
+        conditions = {'rewardingreplay_avoid','rewardingreplay_approach','aversivereplay_avoid','aversivereplay_approach'};
+end
+
+for s = 1:N
     
     subjectparams = parameters(contains(parameters.schar,subjects{s}) & contains(parameters.task,'task'),:);
     nRuns = size(subjectparams,1);
@@ -474,21 +485,15 @@ for s = 2:N
             ['ICA_ds-600Hz_' subjects{s} '_task_r' num2str(subjectparams.block(r)) '.mat']));
         
         try
-            D = spm_eeg_load(fullfile(dir_meg,'replay','epochs_subjecthreshold',subjects{s},...
+            
+            D = spm_eeg_load(fullfile(dir_meg,'replay','epochs',subjects{s},...
                 ['replay-epochs_r' num2str(subjectparams.block(r)) '_' subjects{s} '.mat']));
         
             epochinfo = D.history;
             epochinfo = epochinfo(contains(extractfield(epochinfo,'fun'),'spm_eeg_epochs')).args;
 
-            if any(contains(D.chantype,'EEG'))
-                D = chantype(D,find(contains(D.chantype,'EEG')),'Other');
-                D.save;
-            end
-           
             % check fiducials are present in both files, and all conditions are available
-            if isempty(D.fiducials) && ...
-                    isempty(Dcont.fiducials) && ...
-                    ~all(ismember({'anyreplay_avoid','anyreplay_approach'},D.condlist))
+            if isempty(D.fiducials) || isempty(Dcont.fiducials) || ~all(ismember(conditions,D.condlist))
                 includeRun = false;
             end
         catch
@@ -509,7 +514,7 @@ for s = 2:N
         end
     end
 
-    oat.source_recon.conditions   = {'anyreplay_avoid','anyreplay_approach'}; % do all replay types to start with
+    oat.source_recon.conditions   = conditions; % as determined by conditionType setting
     oat.source_recon.freq_range   = [1 150];
     oat.source_recon.time_range   = [-.1 .15];
 
@@ -522,20 +527,33 @@ for s = 2:N
 
     oat.source_recon.dirname = dir_output;
 
-    design_matrix_summary                   = {};
-    design_matrix_summary{1}                = [1 1]; % one condition (replay onset for any path)
-    oat.first_level.design_matrix_summary   = design_matrix_summary;
+    oat.first_level.design_matrix_summary             = {};
+    oat.first_level.contrast                          = {};
+    oat.first_level.contrast_name                     = {};
+    switch conditionType
+        case 'any'
+            oat.first_level.design_matrix_summary{1}  = [1 1]; % one condition (replay onset for any path)
+            oat.first_level.contrast{1}               = [1];
+            oat.first_level.contrast_name{1}          = 'replay';
+            
+        case 'path'
+            oat.first_level.design_matrix_summary{1}  = [1 1 0 0]; % rewarding replay
+            oat.first_level.design_matrix_summary{2}  = [0 0 1 1]; % aversive replay
+            
+            oat.first_level.contrast{1}               = [1 0];
+            oat.first_level.contrast_name{1}          = 'rewarding';
+            oat.first_level.contrast{2}               = [0 1];
+            oat.first_level.contrast_name{2}          = 'aversive';
+            oat.first_level.contrast{3}               = [1 -1];
+            oat.first_level.contrast_name{3}          = 'differential';
+    end
 
-    oat.first_level.contrast                        = {};
-    oat.first_level.contrast{1}                     = [1];
-    oat.first_level.contrast_name                   = {};
-    oat.first_level.contrast_name{1}                = 'replay';
     oat.first_level.report.first_level_cons_to_do   = 1;
 %     oat.first_level.cope_type                       = 'acope'; % to address sign ambiguity
 
     oat.first_level.time_range                      = [-.1 .1];
     oat.first_level.baseline_timespan               = [-.1 -.05];
-    oat.first_level.name                            = ['wholebrain_first_level'];
+    oat.first_level.name                            = ['differential'];
 
     oat.subject_level.subjects_to_do = 1;
     oat.subject_level.session_index_list = {1:rr};
@@ -550,11 +568,21 @@ end
 
 
 %% Do second level in SPM
-excludeSubjects = {'945092'}; % this subject didn't run the first-level source localisation properly for some reason...
+
+replaytype = 'differential_1-150Hz';
+contrast = 3;
+
+if contains(replaytype,'differential')
+    firstlevelname = 'differential';
+else
+    firstlevelname = 'wholebrain_first_level';
+end
+
+excludeSubjects = {'263098','680913'};
 thesesubjects = setdiff(subjects,excludeSubjects);
 thisN = length(thesesubjects);
 
-dir_images = 'D:\2020_RiskyReplay\data\meg\beamforming\anyreplay_4-8Hz';
+dir_images = fullfile('D:\2020_RiskyReplay\data\meg\beamforming\',replaytype);
 dir_group = fullfile(dir_images,'group');
 
 % --- smooth images
@@ -563,7 +591,7 @@ cc = 0;
 
 cc = cc+1;
 for s = 1:thisN
-    filename = fullfile(dir_images,[thesesubjects{s} '.oat'],'subject1_wholebrain_first_level_sub_level_dir','tstat1_5mm.nii'); 
+    filename = fullfile(dir_images,[thesesubjects{s} '.oat'],['subject1_' firstlevelname '_sub_level_dir'],['tstat' num2str(contrast) '_5mm.nii']); 
     if ~exist(filename) && exist([filename '.gz'])
         gunzip([filename '.gz']);
     end
@@ -607,116 +635,96 @@ spm_jobman('run',matlabbatch);
 
 
 
+timepoints = -0.05:0.01:0.1;
 
-testtype = 'onesample'; % 'onesample','pairedbc'
-if ~exist([dir_group '_' testtype])
-    mkdir([dir_group '_' testtype])
+for tp = 1:length(timepoints)
+    
+    thisdir = [dir_group '_onesample_c' num2str(contrast) '_t' num2str(timepoints(tp)*1000)];
+    if ~exist(thisdir)
+        mkdir(thisdir)
+    end
+
+    clear matlabbatch
+    cc = 0;
+
+    cc = cc+1;
+    matlabbatch{cc}.spm.stats.factorial_design.dir = {thisdir};
+    for s = 1:thisN
+        subjectdir = fullfile(dir_images,[thesesubjects{s} '.oat'],['subject1_' firstlevelname '_sub_level_dir']); 
+        times = importdata(fullfile(subjectdir,'times'));
+        filename = fullfile(subjectdir,['ststat' num2str(contrast) '_5mm.nii,' num2str(findMin(timepoints(tp),times))]);
+        matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = filename;
+    end
+    matlabbatch{cc}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
+    matlabbatch{cc}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI', {}, 'iCC', {});
+    matlabbatch{cc}.spm.stats.factorial_design.masking.tm.tm_none = 1;
+    matlabbatch{cc}.spm.stats.factorial_design.masking.im = 1;
+    matlabbatch{cc}.spm.stats.factorial_design.masking.em = {''};
+    matlabbatch{cc}.spm.stats.factorial_design.globalc.g_omit = 1;
+    matlabbatch{cc}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;
+    matlabbatch{cc}.spm.stats.factorial_design.globalm.glonorm = 1;
+
+    cc = cc+1;
+    matlabbatch{cc}.spm.stats.fmri_est.spmmat = {fullfile(thisdir,'SPM.mat')};
+    matlabbatch{cc}.spm.stats.fmri_est.write_residuals = 0;
+    matlabbatch{cc}.spm.stats.fmri_est.method.Classical = 1;
+
+    cc = cc+1;
+    matlabbatch{cc}.spm.stats.con.spmmat = {fullfile(thisdir,'SPM.mat')};
+    matlabbatch{cc}.spm.stats.con.consess{1}.tcon.name = 'pos';
+    matlabbatch{cc}.spm.stats.con.consess{1}.tcon.weights = 1;
+    matlabbatch{cc}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
+    matlabbatch{cc}.spm.stats.con.consess{2}.tcon.name = 'neg';
+    matlabbatch{cc}.spm.stats.con.consess{2}.tcon.weights = -1;
+    matlabbatch{cc}.spm.stats.con.consess{2}.tcon.sessrep = 'none';
+    matlabbatch{cc}.spm.stats.con.consess{3}.fcon.name = 'F';
+    matlabbatch{cc}.spm.stats.con.consess{3}.fcon.weights = 1;
+    matlabbatch{cc}.spm.stats.con.consess{3}.fcon.sessrep = 'none';
+    matlabbatch{cc}.spm.stats.con.delete = 1;
+
+    % Run job(s)
+    spm_jobman('run',matlabbatch);
 end
-
-bcwindow = [-.1 0]; % baseline time-point to take, main activity timepoint to take
-
-clear matlabbatch
-cc = 0;
-  
-cc = cc+1;
-matlabbatch{cc}.spm.stats.factorial_design.dir = {[dir_group '_' testtype]};
-switch testtype
-    case 'onesample'
-        for s = 1:thisN
-            filename = fullfile(dir_images,[thesesubjects{s} '.oat'],'subject1_wholebrain_first_level_sub_level_dir','ststat1_5mm.nii,61'); 
-            matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = filename;
-        end
-        matlabbatch{cc}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
-        matlabbatch{cc}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI', {}, 'iCC', {});
-        matlabbatch{cc}.spm.stats.factorial_design.masking.tm.tm_none = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.masking.im = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.masking.em = {''};
-        matlabbatch{cc}.spm.stats.factorial_design.globalc.g_omit = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.globalm.glonorm = 1;
-    case 'pairedbc'
-        for s = 1:thisN
-            dir_subj = fullfile(dir_images,[thesesubjects{s} '.oat'],'subject1_wholebrain_first_level_sub_level_dir');
-            times = importdata(fullfile(dir_subj,'times'));
-            frames = [findMin(times,bcwindow(1)) findMin(times,bcwindow(2))];
-            matlabbatch{cc}.spm.stats.factorial_design.des.pt.pair(s).scans = {
-                                                                  fullfile(dir_subj,['ststat1_5mm.nii,' num2str(frames(1))])
-                                                                  fullfile(dir_subj,['ststat1_5mm.nii,' num2str(frames(2))])
-                                                                  };
-        end
-        matlabbatch{cc}.spm.stats.factorial_design.des.pt.gmsca = 0;
-        matlabbatch{cc}.spm.stats.factorial_design.des.pt.ancova = 0;
-        matlabbatch{cc}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
-        matlabbatch{cc}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI', {}, 'iCC', {});
-        matlabbatch{cc}.spm.stats.factorial_design.masking.tm.tm_none = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.masking.im = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.masking.em = {''};
-        matlabbatch{cc}.spm.stats.factorial_design.globalc.g_omit = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;
-        matlabbatch{cc}.spm.stats.factorial_design.globalm.glonorm = 1;
-end
-
-cc = cc+1;
-matlabbatch{cc}.spm.stats.fmri_est.spmmat = {fullfile([dir_group '_' testtype],'SPM.mat')};
-matlabbatch{cc}.spm.stats.fmri_est.write_residuals = 0;
-matlabbatch{cc}.spm.stats.fmri_est.method.Classical = 1;
-
-cc = cc+1;
-matlabbatch{cc}.spm.stats.con.spmmat = {fullfile([dir_group '_' testtype],'SPM.mat')};
-switch testtype
-    case 'onesample'
-        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.name = 'pos';
-        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.weights = 1;
-        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
-        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.name = 'neg';
-        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.weights = -1;
-        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.sessrep = 'none';
-        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.name = 'F';
-        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.weights = 1;
-        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.sessrep = 'none';
-    case 'pairedbc'
-        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.name = 'firstcon';
-        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.weights = [1 -1];
-        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
-        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.name = 'secondcon';
-        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.weights = [-1 1];
-        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.sessrep = 'none';
-        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.name = 'F';
-        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.weights = [-1 1];
-        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.sessrep = 'none';
-end
-matlabbatch{cc}.spm.stats.con.delete = 1;
-
-% Run job(s)
-spm_jobman('run',matlabbatch);
-
-
-
 
 
 % Plot MNI coordinate over time
-coord = [-20 -36 3];
-load('D:\2020_RiskyReplay\data\meg\beamforming\anyreplay_4-8Hz\group_onesample\SPM.mat');
-
-y = [];
-x = [];
-for s = 1:length(SPM.xY.VY)
-    vcoords = mm2vox(coord,spm_vol(SPM.xY.VY(s).fname));
-    V = SPM.xY.VY(s).private;
-    y(s,:) = V.dat(vcoords(1),vcoords(2),vcoords(3),:);
-    x(s,:) = V.timing.toffset:V.timing.tspace:(V.timing.tspace*size(V.dat,4)+V.timing.toffset-V.timing.tspace);
+coord = [-12 18 -27
+    20 -97 -13];
+m = nan(1,length(timepoints));
+for tp = 1:length(timepoints)
+    cd(fullfile('D:\2020_RiskyReplay\data\meg\beamforming\',replaytype,['group_onesample_c' num2str(contrast) '_t' num2str(timepoints(tp)*1000)]))
+    load('SPM.mat');
+    
+    for c = 1:size(coord,1)
+        fname = SPM.xCon(1).Vspm.fname;
+        vcoords = mm2vox(coord(c,:),spm_vol(fname));
+        m(c,tp) = SPM.xCon(1).Vspm.private.dat(vcoords(1),vcoords(2),vcoords(3));
+    end
 end
-x = mean(x);
-
-m = mean(y);
-sem = std(y)/sqrt(size(y,1));
-upper = m+sem;
-lower = m-sem;
 
 figure
-patch([x fliplr(x)],[upper fliplr(lower)],'k','facealpha',.2,'edgecolor','none'); hold on
-plot(x,m,'k','linewidth',1.4); hold on
-plot(x([1 end]),[0 0],'k:');
+plot(timepoints,m,'linewidth',1.4); hold on
+plot(timepoints([1 end]),[0 0],'k:');
+
+% y = [];
+% x = [];
+% for s = 1:length(SPM.xY.VY)
+%     vcoords = mm2vox(coord,spm_vol(SPM.xY.VY(s).fname));
+%     V = SPM.xY.VY(s).private;
+%     y(s,:) = V.dat(vcoords(1),vcoords(2),vcoords(3),:);
+%     x(s,:) = V.timing.toffset:V.timing.tspace:(V.timing.tspace*size(V.dat,4)+V.timing.toffset-V.timing.tspace);
+% end
+% x = mean(x);
+% 
+% m = mean(y);
+% sem = std(y)/sqrt(size(y,1));
+% upper = m+sem;
+% lower = m-sem;
+% 
+% figure
+% patch([x fliplr(x)],[upper fliplr(lower)],'k','facealpha',.2,'edgecolor','none'); hold on
+% plot(x,m,'k','linewidth',1.4); hold on
+% plot(x([1 end]),[0 0],'k:');
 
 %% Beamforming in DAiSS toolbox (on work PC)
 

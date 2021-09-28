@@ -43,7 +43,7 @@ for r = 1:length(oat.source_recon.D_continuous)
     end
 end
 
-% Run source reconstruction
+% Run source reconstruction first level
 oat.to_do = [1 0 0 0];
 oat = osl_run_oat(oat);
 
@@ -59,6 +59,7 @@ for r = 1:nRuns
     end
 end
 
+% Run subject level
 oat.to_do = [0 0 1 0];
 oat.first_level.sessions_to_do = find(includeRun);
 oat.subject_level.session_index_list = {find(includeRun)};
@@ -67,15 +68,13 @@ oat = osl_run_oat(oat);
 % Save
 save(fullfile(oat.source_recon.dirname,'oat.mat'),'oat');
 
-% Write .nii files
-% for f = 1:length(oat.first_level.results_fnames)
-    S                           = [];
-    S.oat                       = oat;
-    S.stats_fname               = oat.subject_level.results_fnames{1}; %[oat.first_level.results_fnames{f} '.mat'];
-    S.first_level_contrasts     = [1];
-    S.resamp_gridstep           = oat.source_recon.gridstep;
-    [statsdir,times,count]      = oat_save_nii_stats(S);
-% end
+% Write .nii files for subject level result
+S                           = [];
+S.oat                       = oat;
+S.stats_fname               = oat.subject_level.results_fnames{1}; %[oat.first_level.results_fnames{f} '.mat'];
+S.first_level_contrasts     = 1:length(oat.first_level.contrast);
+S.resamp_gridstep           = oat.source_recon.gridstep;
+[statsdir,times,count]      = oat_save_nii_stats(S);
 
 % % Write SPM.mat files
 % for f = 1:length(oat.first_level.results_fnames)
