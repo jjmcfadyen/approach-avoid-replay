@@ -724,7 +724,7 @@ m11 <- glmer(Choice ~ EV*Replay_aversive*PCA1 + EV*Replay_aversive*PCA2 + Certai
              data=md, family="binomial",
              control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
-m12 <- glmer(Choice ~ EV*Replay_rewarding*Replay_aversive*PCA1 + EV*Replay_rewarding*Replay_aversive*PCA2 + Certainty + (1|Subject/Lag),
+m12 <- glmer(Choice ~ EV*Replay_rewarding*PCA1 + EV*Replay_rewarding*PCA2 + EV*Replay_aversive*PCA1 + EV*Replay_aversive*PCA2 + Certainty + (1|Subject/Lag),
              data=md, family="binomial",
              control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 

@@ -438,6 +438,9 @@ end
 
 %% Do beamforming in OSL (send to cluster)
 
+% addpath('D:\Toolboxes\spm12')
+% spm('defaults','eeg')
+
 % directories on this work PC
 dir_batch = 'D:\2020_RiskyReplay\approach-avoid-replay\analysis\batch';
 
@@ -453,11 +456,11 @@ end
 dir_continuous = [dir_clustermeg '5_ICA_ds-600Hz/'];
 dir_epoch = [dir_clustermeg '8_replayepochs-600Hz/'];
 
-conditionType = 'path'; % 'any' or 'path'
+conditionType = 'choice'; % 'any' or 'path'
 switch conditionType
     case 'any'
         conditions = {'anyreplay_approach','anyreplay_avoid'};
-    case 'path'
+    case {'path','choice'}
         conditions = {'rewardingreplay_avoid','rewardingreplay_approach','aversivereplay_avoid','aversivereplay_approach'};
 end
 
@@ -546,6 +549,20 @@ for s = 1:N
             oat.first_level.contrast_name{2}          = 'aversive';
             oat.first_level.contrast{3}               = [1 -1];
             oat.first_level.contrast_name{3}          = 'differential';
+        case 'choice'
+            oat.first_level.design_matrix_summary{1}  = [1 0 0 0]; % avoid:    rewarding replay
+            oat.first_level.design_matrix_summary{2}  = [0 1 0 0]; % avoid:    aversive replay
+            oat.first_level.design_matrix_summary{3}  = [0 0 1 0]; % approach: rewarding replay
+            oat.first_level.design_matrix_summary{4}  = [0 0 0 1]; % approach: aversive replay
+            
+            oat.first_level.contrast{1}               = [1 -1 0 0];
+            oat.first_level.contrast_name{1}          = 'diff_avoid';
+            oat.first_level.contrast{2}               = [0 0 1 -1];
+            oat.first_level.contrast_name{2}          = 'diff_approach';
+            oat.first_level.contrast{3}               = [1 1 -1 -1];
+            oat.first_level.contrast_name{3}          = 'diff_choice';
+            oat.first_level.contrast{4}               = [1 -1 -1 1];
+            oat.first_level.contrast_name{4}          = 'interaction';
     end
 
     oat.first_level.report.first_level_cons_to_do   = 1;
@@ -569,16 +586,19 @@ end
 
 %% Do second level in SPM
 
-replaytype = 'differential_1-150Hz';
-contrast = 3;
+addpath('D:\Toolboxes\spm12')
+spm('defaults','eeg')
 
-if contains(replaytype,'differential')
+replaytype = 'choice_1-150Hz'; % 'anyreplay_4-8Hz'    'differential_1-150Hz'
+
+if contains(replaytype,'differential') || contains(replaytype,'choice')
     firstlevelname = 'differential';
+    excludeSubjects = {'263098','680913'};
 else
     firstlevelname = 'wholebrain_first_level';
+    excludeSubjects = {'945092'}; 
 end
 
-excludeSubjects = {'263098','680913'};
 thesesubjects = setdiff(subjects,excludeSubjects);
 thisN = length(thesesubjects);
 
@@ -589,18 +609,22 @@ dir_group = fullfile(dir_images,'group');
 clear matlabbatch
 cc = 0;
 
-cc = cc+1;
-for s = 1:thisN
-    filename = fullfile(dir_images,[thesesubjects{s} '.oat'],['subject1_' firstlevelname '_sub_level_dir'],['tstat' num2str(contrast) '_5mm.nii']); 
-    if ~exist(filename) && exist([filename '.gz'])
-        gunzip([filename '.gz']);
+for c = 1:4
+    cc = cc+1;
+    for s = 1:thisN
+        filename = fullfile(dir_images,[thesesubjects{s} '.oat'],['subject1_' firstlevelname '_sub_level_dir'],['tstat' num2str(c) '_5mm.nii']); 
+        if ~exist(filename) && exist([filename '.gz'])
+            gunzip([filename '.gz']);
+        end
+        matlabbatch{cc}.spm.spatial.smooth.data{s,1} = filename;
     end
-    matlabbatch{cc}.spm.spatial.smooth.data{s,1} = filename;
+    matlabbatch{cc}.spm.spatial.smooth.fwhm = [8 8 8];
+    matlabbatch{cc}.spm.spatial.smooth.dtype = 0;
+    matlabbatch{cc}.spm.spatial.smooth.im = 0;
+    matlabbatch{cc}.spm.spatial.smooth.prefix = 's';
 end
-matlabbatch{cc}.spm.spatial.smooth.fwhm = [8 8 8];
-matlabbatch{cc}.spm.spatial.smooth.dtype = 0;
-matlabbatch{cc}.spm.spatial.smooth.im = 0;
-matlabbatch{cc}.spm.spatial.smooth.prefix = 's';
+
+spm_jobman('run',matlabbatch);
 
 % % --- average across 0 to 100 ms window
 % avgtime = [0 0.1]; % in seconds, to average across
@@ -631,68 +655,71 @@ matlabbatch{cc}.spm.spatial.smooth.prefix = 's';
 %     matlabbatch{cc}.spm.util.imcalc.options.dtype = 4;
 % end
 
-spm_jobman('run',matlabbatch);
-
-
-
-timepoints = -0.05:0.01:0.1;
-
+timepoints = -0.1:0.01:0.1;
 for tp = 1:length(timepoints)
-    
-    thisdir = [dir_group '_onesample_c' num2str(contrast) '_t' num2str(timepoints(tp)*1000)];
-    if ~exist(thisdir)
-        mkdir(thisdir)
+    for c = 1:4
+        
+        thisdir = [dir_group '_onesample_c' num2str(c) '_t' num2str(timepoints(tp)*1000)];
+        if ~exist(thisdir)
+            mkdir(thisdir)
+        end
+
+        clear matlabbatch
+        cc = 0;
+
+        cc = cc+1;
+        matlabbatch{cc}.spm.stats.factorial_design.dir = {thisdir};
+        % (one sample)
+        for s = 1:thisN
+            subjectdir = fullfile(dir_images,[thesesubjects{s} '.oat'],['subject1_' firstlevelname '_sub_level_dir']);
+            times = importdata(fullfile(subjectdir,'times'));
+            matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = fullfile(subjectdir,['ststat' num2str(c) '_5mm.nii,' num2str(findMin(timepoints(tp),times))]);
+        end
+        matlabbatch{cc}.spm.stats.factorial_design.des.pt.gmsca = 0;
+        matlabbatch{cc}.spm.stats.factorial_design.des.pt.ancova = 0;
+        matlabbatch{cc}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
+        matlabbatch{cc}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI', {}, 'iCC', {});
+        matlabbatch{cc}.spm.stats.factorial_design.masking.tm.tm_none = 1;
+        matlabbatch{cc}.spm.stats.factorial_design.masking.im = 1;
+        matlabbatch{cc}.spm.stats.factorial_design.masking.em = {''};
+        matlabbatch{cc}.spm.stats.factorial_design.globalc.g_omit = 1;
+        matlabbatch{cc}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;
+        matlabbatch{cc}.spm.stats.factorial_design.globalm.glonorm = 1;
+
+        cc = cc+1;
+        matlabbatch{cc}.spm.stats.fmri_est.spmmat = {fullfile(thisdir,'SPM.mat')};
+        matlabbatch{cc}.spm.stats.fmri_est.write_residuals = 0;
+        matlabbatch{cc}.spm.stats.fmri_est.method.Classical = 1;
+
+        cc = cc+1;
+        matlabbatch{cc}.spm.stats.con.spmmat = {fullfile(thisdir,'SPM.mat')};
+        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.name = 'pos';
+        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.weights = [1];
+        matlabbatch{cc}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
+        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.name = 'neg';
+        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.weights = [-1];
+        matlabbatch{cc}.spm.stats.con.consess{2}.tcon.sessrep = 'none';
+        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.name = 'any';
+        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.weights = [1];
+        matlabbatch{cc}.spm.stats.con.consess{3}.fcon.sessrep = 'none';
+
+        % Run job(s)
+        spm_jobman('run',matlabbatch);
     end
-
-    clear matlabbatch
-    cc = 0;
-
-    cc = cc+1;
-    matlabbatch{cc}.spm.stats.factorial_design.dir = {thisdir};
-    for s = 1:thisN
-        subjectdir = fullfile(dir_images,[thesesubjects{s} '.oat'],['subject1_' firstlevelname '_sub_level_dir']); 
-        times = importdata(fullfile(subjectdir,'times'));
-        filename = fullfile(subjectdir,['ststat' num2str(contrast) '_5mm.nii,' num2str(findMin(timepoints(tp),times))]);
-        matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = filename;
-    end
-    matlabbatch{cc}.spm.stats.factorial_design.cov = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
-    matlabbatch{cc}.spm.stats.factorial_design.multi_cov = struct('files', {}, 'iCFI', {}, 'iCC', {});
-    matlabbatch{cc}.spm.stats.factorial_design.masking.tm.tm_none = 1;
-    matlabbatch{cc}.spm.stats.factorial_design.masking.im = 1;
-    matlabbatch{cc}.spm.stats.factorial_design.masking.em = {''};
-    matlabbatch{cc}.spm.stats.factorial_design.globalc.g_omit = 1;
-    matlabbatch{cc}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;
-    matlabbatch{cc}.spm.stats.factorial_design.globalm.glonorm = 1;
-
-    cc = cc+1;
-    matlabbatch{cc}.spm.stats.fmri_est.spmmat = {fullfile(thisdir,'SPM.mat')};
-    matlabbatch{cc}.spm.stats.fmri_est.write_residuals = 0;
-    matlabbatch{cc}.spm.stats.fmri_est.method.Classical = 1;
-
-    cc = cc+1;
-    matlabbatch{cc}.spm.stats.con.spmmat = {fullfile(thisdir,'SPM.mat')};
-    matlabbatch{cc}.spm.stats.con.consess{1}.tcon.name = 'pos';
-    matlabbatch{cc}.spm.stats.con.consess{1}.tcon.weights = 1;
-    matlabbatch{cc}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
-    matlabbatch{cc}.spm.stats.con.consess{2}.tcon.name = 'neg';
-    matlabbatch{cc}.spm.stats.con.consess{2}.tcon.weights = -1;
-    matlabbatch{cc}.spm.stats.con.consess{2}.tcon.sessrep = 'none';
-    matlabbatch{cc}.spm.stats.con.consess{3}.fcon.name = 'F';
-    matlabbatch{cc}.spm.stats.con.consess{3}.fcon.weights = 1;
-    matlabbatch{cc}.spm.stats.con.consess{3}.fcon.sessrep = 'none';
-    matlabbatch{cc}.spm.stats.con.delete = 1;
-
-    % Run job(s)
-    spm_jobman('run',matlabbatch);
 end
 
 
 % Plot MNI coordinate over time
-coord = [-12 18 -27
-    20 -97 -13];
+timepoints = -0.05:0.01:0.1;
+% --> Open this the SPM results in the GUI and right clice and select 'Extract table as data structure' - this gives you TabDat
+coord = nan(size(TabDat.dat,1),3);
+for i = 1:size(TabDat.dat,1)
+    coord(i,:) = TabDat.dat{i,end}';
+end
+
 m = nan(1,length(timepoints));
 for tp = 1:length(timepoints)
-    cd(fullfile('D:\2020_RiskyReplay\data\meg\beamforming\',replaytype,['group_onesample_c' num2str(contrast) '_t' num2str(timepoints(tp)*1000)]))
+    cd(fullfile('D:\2020_RiskyReplay\data\meg\beamforming\',replaytype,['group_onesample_t' num2str(timepoints(tp)*1000)]))
     load('SPM.mat');
     
     for c = 1:size(coord,1)

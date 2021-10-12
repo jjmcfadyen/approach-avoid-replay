@@ -13,4 +13,4 @@
 #$ -l vf=[RAM]
 #$ -l h_vmem=[RAM]
 
-time /share/apps/matlab -nosplash -nodesktop -nodisplay -r "cd('[SCRIPTDIR]'); [FUNCTION]('[ARGS]')"
+time /share/apps/matlab -nosplash -nodesktop -nodisplay -singleCompThread -r "cd('[SCRIPTDIR]'); [FUNCTION]('[ARGS]')"

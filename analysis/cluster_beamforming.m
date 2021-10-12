@@ -14,6 +14,10 @@ osl_startup;
 % Load OAT variable
 load(filename);
 
+if length(oat.first_level.contrast) ~= 4
+    error('Incorrect OAT file - not the right number of contrasts...')
+end
+
 % Coregister first
 for r = 1:length(oat.source_recon.D_continuous)
     for e = 1:2
