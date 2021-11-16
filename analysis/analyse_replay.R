@@ -7,12 +7,13 @@ library(tidyverse)
 library(viridis)
 library(extrafont)
 library(gridExtra)
+library(MuMIn)
 
 #######################################
 # LOAD DATA
 #######################################
 
-d <- read.csv("D:/2020_RiskyReplay/results/replay/replay_lme.csv")
+d <- read.csv("D:/2020_RiskyReplay/results/replay/replay_lme_planning.csv")
 Q <- read.csv("D:/2020_RiskyReplay/results/questionnaire_results.csv")
 
 #######################################
@@ -84,9 +85,15 @@ cleandata <- function(d) {
     mutate(RewPathExp_block = cumsum(PathTransition=="rewarding"),
            LossPathExp_block = cumsum(PathTransition=="aversive"))
   
-  d <- as.data.frame(d)
+  # Shift replay to NEXT trial
+  d <- d %>%
+    group_by(Subject,Lag,OverallBlock) %>%
+    mutate(PrevReplay_differential = c(NA,Replay_differential[1:(n()-1)]),
+           PrevReplay_rewarding = c(NA,Replay_rewarding[1:(n()-1)]),
+           PrevReplay_aversive = c(NA,Replay_aversive[1:(n()-1)]))
   
-  return(d)
+  # finish
+  return(as.data.frame(d))
 }
 
 d <- cleandata(d)
@@ -308,9 +315,22 @@ md$PathRecency[md$Replay_type=="rewarding"] <- md$RewPathRecency_block[md$Replay
 md$PathRecency[md$Replay_type=="aversive"] <- md$LossPathRecency_block[md$Replay_type=="aversive"]
 md$PathRecency <- log(md$PathRecency+1)
 
+md$PrevPathType <- md$PrevOutcome > 0
+
+md$SelectedPath <- (md$PathTransition=="rewarding" & md$Replay_type=="rewarding") | (md$PathTransition=="aversive" & md$Replay_type=="aversive")
+
+md$PrevSelected <- rep(NA,nrow(md))
+md$PrevSelected[md$PrevOutcome>0 & md$Replay_type=="rewarding"] = TRUE
+md$PrevSelected[md$PrevOutcome>0 & md$Replay_type=="aversive"] = FALSE
+md$PrevSelected[md$PrevOutcome<0 & md$Replay_type=="rewarding"] = FALSE
+md$PrevSelected[md$PrevOutcome<0 & md$Replay_type=="aversive"] = TRUE
+md$PrevSelected <- as.factor(md$PrevSelected)
+
 md$DiffPathExp <- md$RewPathExp_block - md$LossPathExp_block
 
 md$Choice <- as.factor(md$Choice)
+
+md$UPE <- abs(md$PEbyEV) # unsigned prediction error
 
 md <- filter(md,
              Lag>10,Lag<100,
@@ -331,23 +351,32 @@ md$PathProb <- scale(md$PathProb,center=TRUE,scale=FALSE)
 md$PathVal <- scale(md$PathVal,center=TRUE,scale=FALSE)
 md$PathRecency <- scale(md$PathRecency,center=TRUE,scale=FALSE)
 
-# # get path experience
-# m0 <- lmer(Sequenceness ~ Replay_type + RT + (1|Subject/Lag),
-#             data=md, REML=FALSE,
-#             control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-# summary(m0)
-# 
-# m1 <- lmer(Sequenceness ~ Replay_type*Choice + RT + (1|Subject/Lag),
-#            data=md, REML=FALSE,
-#            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-# summary(m1)
-# 
-# 
-# 
-# m2 <- lmer(Sequenceness ~ PathExp*Replay_type*Choice + RT + (1|Subject/Lag),
-#            data=md, REML=FALSE,
-#            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
-# summary(m2)
+md$CatPEbyEV <- md$PEbyEV > 0
+
+md$PEbyEV <- scale(md$PEbyEV,center=TRUE,scale=FALSE)
+md$Outcome <- scale(md$Outcome,center=TRUE,scale=FALSE)
+md$UPE <- scale(md$UPE,center=TRUE,scale=FALSE)
+
+md$PrevOutcome <- scale(md$PrevOutcome,center=TRUE,scale=FALSE)
+md$PEbyRew <- scale(md$PEbyRew,center=TRUE,scale=FALSE)
+md$PEbyLoss <- scale(md$PEbyLoss,center=TRUE,scale=FALSE)
+
+
+
+m0 <- lmer(Sequenceness ~ Replay_type + RT + (1|Subject/Lag),
+            data=md, REML=FALSE,
+            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m0)
+
+m1 <- lmer(Sequenceness ~ Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m1)
+
+m2 <- lmer(Sequenceness ~ PathExp*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m2)
 # 
 # pred <- jtools::make_predictions(m2,pred="PathExp",
 #                            at=list(Replay_type=unique(md$Replay_type),
@@ -438,6 +467,62 @@ summary(m2)
 
 anova(m1,m2)
 
+
+# effect of previous trial prediction error
+m0 <- lmer(Sequenceness ~ PEbyEV*Replay_type + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m0)
+
+interact_plot(m0,pred=PEbyEV,modx=Replay_type,interval=TRUE,colors=c("#FF0074","#00FF9B"),vary.lty=FALSE) + theme_classic()
+
+m1 <- lmer(Sequenceness ~ PEbyEV_e1*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m2 <- lmer(Sequenceness ~ PEbyEV_e2*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m3 <- lmer(Sequenceness ~ PEbyEV_e3*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m4 <- lmer(Sequenceness ~ PEbyEV_e4*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m5 <- lmer(Sequenceness ~ PEbyEV_e5*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m6 <- lmer(Sequenceness ~ PEbyEV_e6*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m7 <- lmer(Sequenceness ~ PEbyEV_e7*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m8 <- lmer(Sequenceness ~ PEbyEV_e8*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m9 <- lmer(Sequenceness ~ PEbyEV_e9*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m10 <- lmer(Sequenceness ~ PEbyEV_e10*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m11 <- lmer(Sequenceness ~ PEbyEV_e11*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m12 <- lmer(Sequenceness ~ PEbyEV_e12*Replay_type*Choice + RT + (1|Subject/Lag),
+           data=md, REML=TRUE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 #######################################
 # REPLAY ANALYSIS (CHOICE)
 #######################################
@@ -518,6 +603,8 @@ md$RewVal <- scale(md$RewVal,center=TRUE,scale=FALSE)
 md$LossVal <- scale(abs(md$LossVal),center=TRUE,scale=FALSE)
 md$RewProb <- scale(md$RewProb,center=TRUE,scale=FALSE)
 md$DiffPathExp <- scale(md$RewPathExp_block - md$LossPathExp_block,center=TRUE,scale=FALSE)
+md$PEbyEV <- scale(md$PEbyEV,center=TRUE,scale=FALSE)
+md$PrevOutcome <- scale(md$PrevOutcome,center=TRUE,scale=FALSE)
 
 # lm0 <- lmer(Replay_differential ~ Choice + RT + Certainty + Replay_average + (1|Subject/Lag),
 #             data=md, REML=TRUE,
@@ -563,6 +650,31 @@ m2 <- glmer(Choice ~ EV*Replay_differential + Certainty + RT + (1|Subject/Lag),
 
 
 
+
+# (prediction error analysis)
+# d$PEbyEV[md$PEbyEV=="0"] = NA # ignore trials where the previous outcome was the avoidance +1 point
+
+m2a <- glmer(Choice ~ EV*Replay_differential*PEbyEV + Certainty + RT + (1|Subject/Lag),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m2b <- glmer(Choice ~ EV*Replay_differential*PrevOutcome + Certainty + RT + (1|Subject/Lag),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+m2c <- glmer(Choice ~ EV*Replay_differential*PEbyEV + EV*Replay_differential*PrevOutcome + Certainty + RT + (1|Subject/Lag),
+             data=md, family="binomial",
+             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+interact_plot(m2a,pred=PEbyEV,modx=Replay_differential,modx.values=quantile(md$Replay_differential,c(.05,.95)),interval=TRUE,
+              vary.lty=FALSE,colors=c("#FF006C","#00FF7C")) + theme_classic() + coord_cartesian(ylim=c(0,1))
+
+interact_plot(m2b,pred=PrevOutcome,modx=Replay_differential,modx.values=quantile(md$Replay_differential,c(.05,.95)),interval=TRUE,
+              vary.lty=FALSE,colors=c("#FF006C","#00FF7C")) + theme_classic() + coord_cartesian(ylim=c(0,1))
+
+
+
+
 m3 <- glmer(Choice ~ EV*Replay_rewarding + Certainty + RT + (1|Subject/Lag),
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
@@ -575,12 +687,107 @@ m5 <- glmer(Choice ~ EV*Replay_rewarding+ EV*Replay_aversive + Certainty + RT + 
             data=md, family="binomial",
             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
-m6 <- glmer(Choice ~ EV*Replay_rewarding*Replay_aversive + Certainty + RT + (1|Subject/Lag),
-            data=md, family="binomial",
-            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+# m6 <- glmer(Choice ~ EV*Replay_rewarding*Replay_aversive + Certainty + RT + (1|Subject/Lag),
+#             data=md, family="binomial",
+#             control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 anova(m0,m1)
 summary(m1)
+
+
+# (see how replay & EV differ, as function of choice)
+md <- d %>%
+  filter(Lag>10, Lag<100, Choice==0)
+
+md$EVacc <- md$EV
+md$EVacc[md$EV>1 & md$Choice==0] <- md$EV[md$EV>1 & md$Choice==0] * (-1)
+md$EVacc[md$EV<1 & md$Choice==0] <- md$EV[md$EV<1 & md$Choice==0] * (-1)
+
+md$EVacc <- scale(md$EVacc,center=TRUE,scale=FALSE)
+md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
+md$Certainty <- scale(md$Certainty,center=TRUE,scale=FALSE)
+
+m6 <- lmer(Replay_rewarding ~ EV + Certainty + RT + (1|Subject/Lag),
+            data=md, REML=FALSE,
+            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+pd <- md %>% 
+  mutate(rEV = round(EV)) %>% 
+  group_by(Subject,rEV) %>% 
+  mutate(N=n(),Replay=mean(Replay_rewarding)) %>% 
+  group_by(rEV) %>% 
+  summarise(Replay=mean(Replay),N=mean(N))
+jtools::effect_plot(m6,pred=EV,interval=TRUE) + 
+  geom_point(data=pd,aes(x=rEV,y=Replay,size=N))
+
+m7 <- lmer(Replay_aversive ~ EV + Certainty + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+pd <- md %>% 
+  mutate(rEV = round(EV)) %>% 
+  group_by(Subject,rEV) %>% 
+  mutate(N=n(),Replay=mean(Replay_aversive)) %>% 
+  group_by(rEV) %>% 
+  summarise(Replay=mean(Replay),N=mean(N))
+jtools::effect_plot(m7,pred=EV,interval=TRUE) + 
+  geom_point(data=pd,aes(x=rEV,y=Replay,size=N))
+
+
+
+md <- d %>%
+  filter(Lag>10, Lag<100, Choice==1)
+md$EV <- scale(md$EV,center=TRUE,scale=FALSE)
+md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
+md$Certainty <- scale(md$Certainty,center=TRUE,scale=FALSE)
+
+m8 <- lmer(Replay_rewarding ~ EV + Certainty + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+pd <- md %>% 
+  mutate(rEV = round(EV)) %>% 
+  group_by(Subject,rEV) %>% 
+  mutate(N=n(),Replay=mean(Replay_rewarding)) %>% 
+  group_by(rEV) %>% 
+  summarise(Replay=mean(Replay),N=mean(N))
+jtools::effect_plot(m8,pred=EV,interval=TRUE) + 
+  geom_point(data=pd,aes(x=rEV,y=Replay,size=N))
+
+m9 <- lmer(Replay_aversive ~ EV + Certainty + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+pd <- md %>% 
+  mutate(rEV = round(EV)) %>% 
+  group_by(Subject,rEV) %>% 
+  mutate(N=n(),Replay=mean(Replay_aversive)) %>% 
+  group_by(rEV) %>% 
+  summarise(Replay=mean(Replay),N=mean(N))
+jtools::effect_plot(m9,pred=EV,interval=TRUE) + 
+  geom_point(data=pd,aes(x=rEV,y=Replay,size=N))
+
+
+
+
+
+
+md <- d %>%
+  filter(Lag>10, Lag<100, Choice==1)
+md$EV <- scale(md$EV,center=TRUE,scale=FALSE)
+md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
+md$Certainty <- scale(md$Certainty,center=TRUE,scale=FALSE)
+
+m7 <- lmer(Replay_rewarding ~ EV + Certainty + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+pd <- md %>% 
+  mutate(rEV = round(EV)) %>% 
+  group_by(Subject,rEV) %>% 
+  mutate(N=n(),Replay=mean(Replay_rewarding)) %>% 
+  group_by(rEV) %>% 
+  summarise(Replay=mean(Replay),N=mean(N))
+jtools::effect_plot(m7,pred=EV,interval=TRUE) + 
+  geom_point(data=pd,aes(x=rEV,y=Replay,size=N))
+
+
+
 
 # get indifference points
 pred <- jtools::make_predictions(m2,pred="EV")

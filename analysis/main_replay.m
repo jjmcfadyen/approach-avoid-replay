@@ -40,35 +40,7 @@ group_best_time = 120; % from group average cross-validation accuracy
 
 % Sequenceness parameters
 U = generate_nullperms([]); 
-
-%% Get classification accuracy & lambdas for all subjects
-
-CV = [];
-lambdas = [];
-for s = 1:N
-
-    %% Get best lambda for each classifier
-    for t = 1:nT
-        
-        % Load cross-validation accuracy
-        load(fullfile(dir_classifiers,subjects{s},...
-            ['cv_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(thisnull) '.mat']));
-        
-        % Average over folds
-        cv = squeeze(nanmean(cv));
-
-        % Get best lambda (averaged across conditions)
-        [~,best_lambda] = max(nanmean(cv));
-        lambdas(s,t) = best_lambda;
-
-        % Get minimum accuracy across all 6 states
-        CV(s,t,1) = min(cv(:,best_lambda)); 
-        CV(s,t,2) = mean(cv(:,best_lambda)); 
-        CV(s,t,3) = max(cv(:,best_lambda)); 
-        
-    end
-end
-
+ 
 %% Compute minimum classification accuracy for moving on to replay
 
 [~,sortidx] = sort(max(CV(:,:,2),[],2),'descend');
@@ -571,6 +543,10 @@ set(gca,'ticklength',[0 0])
 
 %% Extract the path-specific replay and put in data table
 
+epochtype = 'planning'; % 'planning' or 'transition'
+
+load(fullfile(dir_replay,'optimised_times.mat'));
+
 excludeSubjects = {'263098','680913'}; %{'396430','263098','680913'}; % bad classification (1), bad performance (rest)
 thesesubjects = find(~ismember(subjects,excludeSubjects));
 thisN = length(thesesubjects);  
@@ -584,7 +560,13 @@ for s = 1:thisN
     
     %% Get data
     % Get replay for optimised classifier training time
-    load(fullfile(dir_replay,subjects{S},['replay_' subjects{S} '_t' num2str(optimised_times(S)) '_n' num2str(thisnull) '.mat']));
+    switch epochtype
+        case 'planning'
+            load(fullfile(dir_replay,subjects{S},['replay_' subjects{S} '_t' num2str(optimised_times(S)) '_n' num2str(thisnull) '.mat']));
+        case 'transition'
+            load(fullfile([dir_replay '_postplanning'],subjects{S},['replay_' subjects{S} '_t' num2str(optimised_times(S)) '_n' num2str(thisnull) '.mat']));
+            replay = squeeze(replay(2,:,:,:,:,:)); % DIM 1: 1=entire epoch, 2=transition/safe, 3=outcome/safe
+    end
     
     % load behaviour
     load(fullfile(dir_behav,subjects{S},[subjects{S} '_parsedBehav.mat']))
@@ -661,6 +643,73 @@ for s = 1:thisN
             end
         end
     end
+   
+%     % add prediction error after approach trials as a variable
+%     behav.OverallBlock = behav.Block;
+%     behav.OverallBlock(behav.Practice==true) = 0;
+%     blocks = unique(behav.OverallBlock);
+%     
+%     switch epochtype
+%         case 'planning' % use PREVIOUS prediction error
+%             behav.RewProb = behav.P;
+%             behav.RewProb(behav.nV_1<behav.nV_2) = 1-behav.P(behav.nV_1<behav.nV_2);
+%             behav.RewVal = max([behav.nV_1 behav.nV_2],[],2);
+%             behav.LossVal = min([behav.nV_1 behav.nV_2],[],2);
+% 
+%             behav.PrevOutcome = nan(size(behav,1),1); % difference between outcome and EV on previous trial
+%             behav.PEbyEV = nan(size(behav,1),1); % difference between outcome and EV on previous trial
+%             behav.PEbyProb = nan(size(behav,1),1); % inverse of the transition and the probability
+%             behav.PEbyRew = nan(size(behav,1),1); % difference between outcome and REWARDING EV
+%             behav.PEbyLoss = nan(size(behav,1),1); % difference between outcome and PUNISHING EV
+%             for trl = 2:size(behav,1)
+%                 % check that previous trial was from same block, and previous trial was an approach trial
+%                 if behav.Practice(trl)==behav.Practice(trl-1) && behav.Block(trl)==behav.Block(trl-1)
+%                     if behav.Choice(trl-1)==1
+%                         behav.PEbyEV(trl) = behav.Outcome(trl-1) - behav.EV(trl-1);
+%                         if behav.Transition(trl-1)==1
+%                             behav.PEbyProb(trl) = behav.P(trl-1);
+%                         elseif behav.Transition(trl-1)==2
+%                             behav.PEbyProb(trl) = 1-behav.P(trl-1);
+%                         end
+%                         behav.PEbyRew(trl) = behav.Outcome(trl-1) - (behav.RewVal(trl-1)*behav.RewProb(trl-1));
+%                         behav.PEbyLoss(trl) = behav.Outcome(trl-1) - (behav.LossVal(trl-1)*(1-behav.RewProb(trl-1)));
+%                     else
+%                         behav.PEbyEV(trl) = 0;
+%                         behav.PEbyProb(trl) = 0;
+%                     end
+%                     behav.PrevOutcome(trl) = behav.Outcome(trl-1);
+%                 end
+%             end
+% 
+%             % add prediction error with different exponential decay rates
+%             cc = 0;
+%             for delta = [0.1 0.2 0.3 0.5 0.7 1 1.5 3 5 10 15 25] 
+%                 cc = cc+1;
+%                 behav.(['PEbyEV_e' num2str(cc)]) = nan(size(behav,1),1);
+%                 for block = 1:length(blocks)
+% 
+%                     blockidx = behav.OverallBlock==blocks(block);
+% 
+%                     blockPE = behav.Outcome(blockidx) - behav.EV(blockidx);
+% 
+%                     weightedPE = nan(length(blockPE),1);
+%                     for trl = 2:length(blockPE)
+%                         thisdecay = normalise(exp(delta*[1:trl]'));
+%                         weightedPE(trl) = nansum(blockPE(1:trl) .* thisdecay);
+%                     end
+% 
+%                     thisidx = find(blockidx);
+%                     behav.(['PEbyEV_e' num2str(cc)])(thisidx(2:end)) = weightedPE(1:end-1);
+% 
+%                 end
+%             end
+%         case 'transition'
+%             behav.PEbyEV = nan(size(behav,1),1);
+%             for block = 1:length(blocks)
+%                 blockidx = behav.OverallBlock==blocks(block);
+%                 behav.PEbyEV(blockidx) = behav.Outcome(blockidx) - behav.EV(blockidx);
+%             end
+%     end
     
     % match up the replay data to the behavioural data
     load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{S} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
@@ -686,7 +735,9 @@ for s = 1:thisN
     % Put in Y variable
     Y{s} = behav(:,ismember(behav.Properties.VariableNames,...
         {'Practice','Block','Trial','Forced','ExpTrial','P','nV_1','nV_2','EV','Choice','RT','Acc','Outcome',...
-        'Path1Type','Path2Type','RewPathRecency_block','LossPathRecency_block','RewPathRecency_half','LossPathRecency_half'})); % just take the most relevant columns, to save space
+        'Path1Type','Path2Type','RewPathRecency_block','LossPathRecency_block','RewPathRecency_half','LossPathRecency_half',...
+        'PEbyEV','PEbyProb','PrevOutcome','PEbyRew','PEbyLoss'})); % just take the most relevant columns, to save space
+    Y{s} = [Y{s} behav(:,contains(behav.Properties.VariableNames,'PEbyEV_e'))];
     
     % Add learning of path value
     alphas = 0.1:0.2:0.9;
@@ -928,4 +979,4 @@ T.Subject = categorical(T.Subject,unique(T.Subject),unique(T.Subject));
 glme = fitglme(T(T.Lag==60,:),'Choice~Replay_differential+(1|Subject:Lag)','distribution','binomial')
 
 % Save
-writetable(T,'D:\2020_RiskyReplay\results\replay\replay_lme.csv');
+writetable(T,['D:\2020_RiskyReplay\results\replay\replay_lme_' epochtype '.csv']);
