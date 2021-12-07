@@ -2,3 +2,5 @@ toolboxes/
 *.mat
 *.dat
 *job_*.sh
+*.asv
+analysis/batch*
