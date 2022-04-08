@@ -16,7 +16,22 @@ disp(['Detected ' num2str(N) ' subjects in raw data folder.'])
 % Loop through subjects and add raw filenames
 for s = 1:N
    
-    filelist = extractfield(dir(fullfile(dir_raw,subjects{s},'*.ds')),'name');
+    if any(contains(subjects{s},'zip'))
+        filelist = listzipcontents(fullfile(dir_raw,subjects{s}));
+        for i = 1:length(filelist)
+            idx = find(filelist{i} == '/');
+            if length(idx)>1
+                filelist{i} = filelist{i}(1:(idx(2)-1));
+            else
+                filelist{i} = [];
+            end
+        end
+        filelist = filelist(~cellfun('isempty',filelist),:);
+        filelist = unique(filelist)';
+        subjects{s} = subjects{s}(1:end-4);
+    else
+        filelist = extractfield(dir(fullfile(dir_raw,subjects{s},'*.ds')),'name');
+    end
     
     nRaw = length(filelist);
     disp(['--- ' num2str(nRaw) ' files for ' subjects{s}])

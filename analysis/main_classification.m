@@ -46,7 +46,8 @@ nStates = 6;
 
 %% Build classifiers & cross-validate
 
-makePlots = true;
+makePlots = false;
+onCluster = true;
 
 if makePlots
     allstatenames = {'baby','bicycle','bowtie','backpack','car','cat','cupcake','house','zebra','toothbrush','hourglass','lamp'};
@@ -55,7 +56,7 @@ end
 
 tc = nan(N,6);
 stateorder = cell(N,6); % the order of images in 'allstatenames' for this subject
-for s = 1:N
+for s = 2:N
     
     % Load data
     load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_FL_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
@@ -136,8 +137,6 @@ for s = 1:N
     for t = 1:nT
         for n = 1:nN
             
-%             tic
-            
             disp('===================================')
             disp(['=== SUBJECT ' subjects{s} ', TP = ' num2str(trainTimes(t)) ' ms ==='])
             disp('===================================')
@@ -147,19 +146,20 @@ for s = 1:N
             
             % Save for the cluster
             filename = fullfile(dir_save,['data_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(nulldata(n)) '.mat']);
-%             save(filename,'X','Y');
-%             
-            % Build classifier & cross-validate
-            classifier = build_classifier(filename);
-            save(fullfile('D:\2020_RiskyReplay\data\meg\classifiers',subjects{s},...
-                ['classifier_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(nulldata(n)) '.mat']),'classifier');
-%             crossvalidate_classifier(filename);
-% 
-%             % Create job for cluster
-%             generate_jobs_classifier(subjects{s},trainTimes(t),nulldata(n));
-%             
-%             toc
+            save(filename,'X','Y');
 
+            if ~onCluster
+
+                % Build classifier & cross-validate
+                classifier = build_classifier(filename);
+                save(fullfile('D:\2020_RiskyReplay\data\meg\classifiers',subjects{s},...
+                    ['classifier_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(nulldata(n)) '.mat']),'classifier');
+                crossvalidate_classifier(filename);
+            else
+
+                % Create job for cluster
+                generate_jobs_classifier(subjects{s},trainTimes(t),nulldata(n),'holly');
+            end
         end
     end
 end
@@ -295,7 +295,7 @@ s = sortidx(end-4);
 layout = load('D:\Toolboxes\fieldtrip-20191119\template\layout\CTF275_helmet.mat');
 pos = layout.lay.pos;
 
-% for s = 1:N
+for s = 1:N
     
     % Load classifier
     load(fullfile(dir_classifiers,subjects{s},['classifier_' subjects{s} '_t' num2str(besttime) '_n1.mat']));
@@ -383,4 +383,127 @@ pos = layout.lay.pos;
     end
     sgtitle(subjects{s})
     
-% end
+end
+
+%% Cross-validate across time points
+
+onCluster = true;
+
+for s = 1:N
+    
+    % Load data
+    load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_FL_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
+    data = merged;
+    clear merged
+    
+    % Remove incorrect trials
+    behav = readtable(fullfile(dir_behav,subjects{s},[num2str(str2double(subjects{s})) '_fl.csv']));
+    idx = strcmp(behav.Acc,'True'); % index of trials to include
+    
+    % Remove outlier RT trials
+    idx = idx & abs(zscore(behav.RT)) < 5;
+    
+    data.trialinfo = data.trialinfo(idx,:);
+    data.sampleinfo = data.sampleinfo(idx,:);
+    data.trial = data.trial(idx);
+    data.time = data.time(idx);
+    
+    % Do baseline correct (if applicable)
+    if bc
+       
+        cfg = [];
+        cfg.demean = 'yes';
+        cfg.baselinewindow = bcwindow;
+        cfg.continuous = 'no';
+    
+        data = ft_preprocessing(cfg,data);
+        
+    end
+
+    % Create output directory for saving data/labels for the cluster
+    dir_save = fullfile(dir_batch,subjects{s});
+    if ~exist(dir_save)
+        mkdir(dir_save)
+    end
+    
+    % Cross-validate on other states
+    for n = 1:nN
+        cc = 0;
+        for t1 = 1:nT
+            for t2 = 1:nT
+           
+                if t1~=t2
+
+                    disp('===================================')
+                    disp(['=== SUBJECT ' subjects{s} ', TP1 = ' num2str(trainTimes(t1)) ' ms, TP2 = ' num2str(trainTimes(t2)) ' ms ==='])
+                    disp('===================================')
+    
+                    % Load the data at T1 and T2
+                    [X1,Y1] = organise_FL_data(data,trainTimes(t1),nulldata(n));
+                    [X2,Y2] = organise_FL_data(data,trainTimes(t2),nulldata(n));
+        
+                    % Save 
+                    cc = cc+1;
+                    filename = fullfile(dir_save,['data_' subjects{s} '_idx' num2str(cc) '_n' num2str(nulldata(n)) '.mat']);
+                    timeidx = trainTimes([t1 t2]);
+                    save(filename,'X1','Y1','X2','Y2','timeidx');
+    
+                    if ~onCluster
+                        crossvalidate_classifier(filename); % save to disk
+                    end
+
+                end
+            end
+        end
+
+        if onCluster
+
+            % Create job for cluster
+            generate_jobs_classifier(subjects{s},[num2str(1) '-' num2str(cc)],nulldata(n),'holly');
+
+        end
+
+    end
+end
+
+%% After computing all the cross-validation, put into matrix
+CV = nan(N,nT,nT,nStates);
+for s = 1:N
+
+    for t1 = 1:nT
+
+        % Load classifier trained on T1
+        load(fullfile('D:\2020_RiskyReplay\data\meg\classifiers',subjects{s},...
+            ['classifier_' subjects{s} '_t' num2str(trainTimes(t1)) '_n' num2str(nulldata(n)) '.mat']));
+
+        % load original accuracy for this classifier (same training/test time, so need to do folds)
+        load(fullfile('D:\2020_RiskyReplay\data\meg\classifiers',subjects{s},...
+            ['cv_' subjects{s} '_t' num2str(trainTimes(t1)) '_n' num2str(nulldata(n)) '.mat']));
+
+        cv = squeeze(mean(cv));
+
+        % get best lambda
+        [~,bestLambda] = max(mean(cv),[],2);
+
+        % log
+        CV(s,t1,t1,:) = cv(:,bestLambda);
+
+        for t2 = 1:nT
+
+            if t1~=t2
+
+                % load accuracy of t1 applied to t2 data
+
+
+            end
+        end
+    end
+end
+
+
+plotcv = interp2(squeeze(mean(mean(CV),4)),5);
+
+figure
+imagesc(plotcv)
+colormap(colours(256,'inferno'))
+set(gca,'ticklength',[0 0])
