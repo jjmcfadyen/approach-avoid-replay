@@ -13,7 +13,7 @@ tp = [1 2; 2 3; 4 5; 5 6]; % transition pairs
 nTransitions = size(tp,1);
 
 % Lags
-maxLag = 0.6; % in seconds
+maxLag = 3; % in seconds
 maxLag = maxLag / (1/data.fsample); % convert to samples
 
 bins = 10; % consider 10 Hz alpha (or set to 'maxLag' to ignore)

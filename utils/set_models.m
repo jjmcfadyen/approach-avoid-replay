@@ -863,7 +863,7 @@ models(m).nThresh = 1;
 models(m).type = 'aversive'; % which path is calculated
 models(m).learning = true; % false if they do the calculation, true if they learn the overall value of each path over time
 models(m).qlearner = true; % don't calculate value, just learn it from experience
-models(m).neglearn = true; % store separate values for each position of odd rule per path
+
 
 % Set fixed/free parameters (set to NaN to optimise it, otherwise sim_model.m uses defaults)
 models(m).params.threshold.val = NaN;

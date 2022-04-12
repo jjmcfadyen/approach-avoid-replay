@@ -1,8 +1,8 @@
 function cluster_replay(subject,timepoint,nulldata,lambda)
 
-dir_classifiers = '/lustre/scratch/scratch/skgtjm6/2020_RiskyReplay/data/meg/classifiers/';
-dir_replay = fullfile('/lustre/scratch/scratch/skgtjm6/2020_RiskyReplay/data/meg/replay/withoutintercept/',subject);
-dir_data = '/lustre/scratch/scratch/skgtjm6/2020_RiskyReplay/data/meg/7_merged_ds-100Hz/';
+dir_classifiers = '/data/holly-host/jmcfadyen/2020_RiskyReplay/data/meg/classifiers/';
+dir_replay = fullfile('/data/holly-host/jmcfadyen/2020_RiskyReplay/data/meg/replay/withoutintercept/',subject);
+dir_data = '/data/holly-host/jmcfadyen/2020_RiskyReplay/data/meg/7_merged_ds-100Hz/';
 
 if ~exist(dir_replay)
     mkdir(dir_replay)

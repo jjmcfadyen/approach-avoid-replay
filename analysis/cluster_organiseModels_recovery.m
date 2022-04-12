@@ -2,6 +2,7 @@
 
 addpath('/data/holly-host/jmcfadyen/2020_RiskyReplay/scripts/utils')
 
+nModels = 28;
 maxnp = 4;
 
 nLL = [];

@@ -151,12 +151,16 @@ for trl = 1:nTrls
                 elseif strcmp(params.type,'rewarding') || strcmp(params.type,'aversive')
                     switch params.type
                         case 'rewarding'
-                            path = find(old_nV==max(old_nV));
+                            path = find(sum(old_nV,1)==max(sum(old_nV,1)));
                         case 'aversive'
-                            path = find(old_nV==min(old_nV));
+                            path = find(sum(old_nV,1)==min(sum(old_nV,1)));
                     end
                     if length(path)>1
-                        path = [1 2];
+                        if strcmp(randtype,'one')
+                            path = randi(2);
+                        else
+                            path = [1 2];
+                        end
                     end
                 else
                     error('Could not determine which path is to be calculated')

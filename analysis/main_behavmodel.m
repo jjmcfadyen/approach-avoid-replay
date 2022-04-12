@@ -135,7 +135,7 @@ end
 %% Fit models
 
 onCluster = true;
-makePlots = true;
+makePlots = false;
 numStart = 3; % number of different starting values to use per parameter
 
 % create empty structures for model optimisation output
@@ -217,7 +217,7 @@ for s = 1:N
                 plotdata.yhatfit{m} = pred_yhat(sortidx);
             end
     
-            [aic,bic] = aicbic(-output.nLL,models(m).paraminfo.nFree,size(yhat,1));
+            [aic,bic] = aicbic(-output.nLL,models(m).paraminfo.nFree,size(output.T,1));
             
             optim(m).nLL(s,:) = output.nLL;
             optim(m).params(s,:) = array2table(x');
@@ -235,7 +235,9 @@ for s = 1:N
             info.subject = subjects{s};
             info.m = m;
 
-            save(filename,'model','d','numStart','info');
+            thisd = d;
+
+            save(filename,'model','thisd','numStart','info');
         end
     end
 
@@ -276,7 +278,7 @@ end
 
 %% Plot
 
-modelorder = [10 4 2 3 7 5 6 8 9 1];
+modelorder = 1:nModels;
 
 excludedSubjects = {}; %{'263098','680913'};
 includedidx = ~ismember(subjects,excludedSubjects);
@@ -330,9 +332,9 @@ for s = 1:N
     bic = BIC(sortidx(s),:);
     bic = bic(strcmp(mnames,'null')) - bic(:);
     bic = bic(modelorder);
-    tmp = [[2:10]' bic(2:end)];
+%     tmp = [[2:10]' bic(2:end)];
     bar(bic);
-    title([num2str(round(acc(sortidx(s))*100)) '%'])
+    title([num2str(round(acc(sortidx(s))*100)) '% - ' mnames{find(bic==max(bic))}])
     set(gca,'ticklength',[0 0])
 end
 
@@ -340,7 +342,7 @@ end
 figure
 for m = 1:nModels
 
-    subplot(2,5,m)
+    subplot(4,8,m)
     
     paramnames = models(m).paraminfo.names;
     np = models(m).paraminfo.nFree;
@@ -367,10 +369,6 @@ nIterations = 50;
 numStart = 1;
 
 maxnp = 4;
-
-% simulate new data
-d = parse_behav(subjects{randi(N)},dir_data); % randomly select subject protocol for simulations
-d = d(:,1:23);
 
 % run procedure
 if ~onCluster
@@ -403,14 +401,18 @@ for m1 = 1:nModels
         itparams = nan(models(m1).paraminfo.nFree,1);
         for p = 1:models(m1).paraminfo.nFree
             
-%             fitparams = table2array(optim(m1).params(:,p));
-%             thisparam = unifrnd(min(fitparams),max(fitparams));
-
-            if isinf(models(m1).params.(pnames{p}).ub)
-                thisparam = unifrnd(realmin,5);
-            else
-                thisparam = unifrnd(models(m1).params.(pnames{p}).lb,models(m1).params.(pnames{p}).ub);
+            fitparams = table2array(optim(m1).params(:,p));
+            thisparam = normrnd(mean(fitparams),std(fitparams));
+            thisrange = [models(m1).params.(models(m1).paraminfo.names{p}).lb models(m1).params.(models(m1).paraminfo.names{p}).ub];
+            while thisparam < thisrange(1) || thisparam > thisrange(2)
+                thisparam = normrnd(mean(fitparams),std(fitparams)); % make sure the randomly generated number is within the correct range
             end
+
+%             if isinf(models(m1).params.(pnames{p}).ub)
+%                 thisparam = unifrnd(realmin,5);
+%             else
+%                 thisparam = unifrnd(models(m1).params.(pnames{p}).lb,models(m1).params.(pnames{p}).ub);
+%             end
 
             itparams(p,1) = thisparam;
         end
@@ -421,6 +423,11 @@ for m1 = 1:nModels
         newP = nan(nIterations,models(m1).paraminfo.nFree); % 1 = iteration number, 2 = parameter number
         parfor it = 1:nIterations
     
+            % simulate new data
+            d = parse_behav(subjects{randi(N)},dir_data); % randomly select subject protocol for simulations
+            d = d(:,1:23);
+            d.Choice(d.Choice==2) = 0; % 1 = approach, 0 = avoid
+
             % generate predicted data
             [~, output, thisd] = sim_model(d,models(m1),squeeze(origP(it,:)));
     
@@ -526,7 +533,7 @@ for m = 1:nModels
 
     thiscorr = corr(squeeze(recovery{modelorder(m)}(:,:,1)),squeeze(recovery{modelorder(m)}(:,:,2)));
 
-    subplot(2,5,m)
+    subplot(4,7,m)
     imagesc(abs(thiscorr))
     colormap('gray')
     caxis([0 1])
