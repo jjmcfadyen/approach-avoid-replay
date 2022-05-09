@@ -41,14 +41,29 @@ group_best_time = 120; % from group average cross-validation accuracy
 % Sequenceness parameters
 U = generate_nullperms([]); 
 
-% Generate lambda values
-gamma      = 0.05; % parameter for half-Cauchy distribution of lambdas
-nLambda    = 100;  % how many lambda values to sample
-lWidth     = [1e-4:1e-4:1]; % limits of sampling
+%% Load and select best lambda (on average)
 
-rng(1);
-pdf = 2 ./ (pi*gamma*(1 + (lWidth/gamma).^2)); % half-Cauchy distribution
-lambdas = sort(datasample(lWidth,nLambda,'weights',pdf,'replace',false));
+CV = nan(N,nT,nStates);
+lambdas = nan(N,nT);
+for s = 1:N
+    for t = 1:nT
+            
+        % Load 'cv' and 'classifier' variables
+        load(fullfile(dir_classifiers,subjects{s},...
+            ['cv_' subjects{s} '_t' num2str(trainTimes(t)) '_n' num2str(thisnull) '.mat']));
+
+        % Average over folds
+        cv = squeeze(nanmean(cv));
+
+        % Get best lambda (averaged across conditions)
+        [~,best_lambda] = max(nanmean(cv));
+        lambdas(s,t) = best_lambda;
+
+        % Store in variable
+        CV(s,t,:) = cv(:,best_lambda);
+
+    end
+end
 
 %% Generate sequenceness for all classifier training times
 
@@ -58,26 +73,26 @@ planningType = 'during'; % 'during' planning (main analysis) or 'post' planning 
 
 for s = 1:N
  
-    % Get task data
-    switch planningType
-        case 'during'
-            dir_save = fullfile(dir_replay,subjects{s});
-            load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
-        case 'post'
-            dir_save = fullfile([dir_replay '_postplanning'],subjects{s});
-            load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_post-task_' num2str(Fs) 'Hz.mat']));
-    end
-    data = merged;
-    clear merged;
-    
-    if ~exist(dir_save)
-        mkdir(dir_save);
-    end
-    
-    if ~isfield(data,'fsample')
-        data.fsample = Fs;
-    end
-    
+%     % Get task data
+%     switch planningType
+%         case 'during'
+%             dir_save = fullfile(dir_replay,subjects{s});
+%             load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
+%         case 'post'
+%             dir_save = fullfile([dir_replay '_postplanning'],subjects{s});
+%             load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_post-task_' num2str(Fs) 'Hz.mat']));
+%     end
+%     data = merged;
+%     clear merged;
+%     
+%     if ~exist(dir_save)
+%         mkdir(dir_save);
+%     end
+%     
+%     if ~isfield(data,'fsample')
+%         data.fsample = Fs;
+%     end
+%     
 %     % split post-planning into first 3 seconds (transition/outcome) or last 3 seconds (outcome)
 %     if strcmp(planningType,'post')
 %         first = data;
@@ -158,6 +173,11 @@ end
 %% Optimise classifier selection via forwards-backwards replay
 % We want the largest peak, while also minimising autocorrelation
 
+Fs = 100; % sampling rate of task data (where you detect replay)
+dir_replay = 'D:\2020_RiskyReplay\data\meg\replay\withoutintercept';
+
+laglim = []; % in ms
+
 % Settings
 criteria_seqType = 'diff'; % 'either' forwards or backwards, or the 'diff' fwd-bwd measure
 thesetimes = trainTimes(mean(squeeze(CV(:,:,2)))==max(mean(squeeze(CV(:,:,2))))); % find best classifier training time on average
@@ -194,16 +214,33 @@ for s = 1:N
          tmp = load(fullfile(dir_replay,subjects{s},['replay_' subjects{s} '_t' num2str(thisT(t)) '_n' num2str(thisnull) '.mat']));
          replay(t,:,:,:,:) = squeeze(mean(tmp.replay,4)); % average over transitions
     end
-    
+
+    if ~isempty(laglim)
+        x = 10:(1/Fs*1000):size(replay,5)*10;
+        replay = replay(:,:,:,:,x >= laglim(1) & x <= laglim(end));
+    end
+
+    % Remove trials with dead lags
+    load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
+    ridx = zeros(size(replay,2),1);
+    for trl = 1:size(replay,2)
+        if merged.time{trl}(end) < size(replay,5)*(1/Fs)
+            ridx(trl,1) = 1;
+        end
+    end
+    disp(['--- Removing ' num2str(sum(ridx)) ' trials for being shorter than the maximum lag'])
+
+    if any(ridx)
+        replay = replay(:,~ridx,:,:,:);
+    end
+
     if removeForced
         
          % match up the replay data to the behavioural data
          load(fullfile(dir_behav,subjects{s},[subjects{s} '_parsedBehav.mat']))
          behav = behav.task;
          
-         load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{s} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
          trialinfo = merged.trialinfo;
-         clear merged
          
          idx = nan(size(replay,2),1);
          for trl = 1:length(idx)
@@ -216,9 +253,10 @@ for s = 1:N
          
          replay = replay(:,behav.Forced(idx)==0,:,:,:);
     end
+    clear merged
     
     trialcount(s,1) = size(replay,2);
-    
+
     % Plot
     if makeplots
         cmap = colours(length(thisT),'viridis');
@@ -231,7 +269,8 @@ for s = 1:N
                 opts.g = g;
                 opts.avCol = cmap(t,:);
                 opts.nullThresh = false;
-                opts.subtractNull = true;
+                opts.subtractNull = false;
+                opts.x = linspace(0,size(replay,5)*(1/Fs),size(replay,5))*1000;
                 if g==3
                     opts.subtractNull = false;
                     opts.nullThresh = false;
@@ -276,7 +315,7 @@ for s = 1:N
 end
 
 if length(thesetimes) > 1
-    save(fullfile(dir_replay,'optimised_times.mat'),'optimised_times');
+    save(fullfile(dir_replay,'optimised_times.mat'),'optimised_times','optimised_replay');
 end
 
 % Plot group average, optimised training time
@@ -357,8 +396,11 @@ for s = 1:N
     classifier.intercepts = classifier.intercepts(:,thislambda);
     
     % Get predicted state reactivation per trial
-    thisreactivation = nan(nTrls,8); % X*BETAS: path 1, path 2, rewarding, aversive; SIGMOID: path 1, path 2, rewarding, aversive
-    parfor trl = 1:nTrls
+    Rmult = [];
+    Rsig = [];
+    tidx = [];
+    dm = [];
+    for trl = 1:nTrls
    
         C = classifier;
         thistrl = sortidx(trl);
@@ -377,40 +419,41 @@ for s = 1:N
 
         % Apply classifier to get predicted data
         Ymult = X*C.betas';
-        Ysig = 1 ./ (1 + exp(-(X*C.betas'))) > .5;
+        Ysig = 1 ./ (1 + exp(-(X*C.betas')));
 
-        dm = [squash([ones(size(X,1),3) zeros(size(X,1),3)*2]),...
-              squash([zeros(size(X,1),3) ones(size(X,1),3)*2])];
+        % Get design matrix
+        thisdm = [squash([ones(size(X,1),3) zeros(size(X,1),3)]) squash([zeros(size(X,1),3) ones(size(X,1),3)])];
 
-        betas_mult = pinv([dm ones(size(dm,1),1)])*Ymult(:);
-        betas_sig = pinv([dm ones(size(dm,1),1)])*Ysig(:);
-        
-        if behav.nV_1(trl) > behav.nV_2(trl)
-            betas = [betas_mult(1:2)' betas_mult(1:2)' betas_sig(1:2)' betas_sig(1:2)'];
-        else
-            betas = [betas_mult(1:2)' betas_mult([2 1])' betas_sig(1:2)' betas_sig([2 1])'];
+        if behav.nV_1(trl) < behav.nV_2(trl)
+            thisdm = thisdm(:,[2 1]); % flip so that first column is rewarding path
         end
 
-        thisreactivation(trl,:) = betas;
-
-%         if behav.nV_1(trl) > behav.nV_2(trl)
-%             thisorder = [1 2 3; 4 5 6];
-%         else
-%             thisorder = [4 5 6; 1 2 3];
-%         end
-% 
-%         thisreactivation(trl,:) = [
-%             mean(squash(Ymult(:,1:3))),...
-%             mean(squash(Ymult(:,4:6))),...
-%             mean(squash(Ymult(:,thisorder(1,:)))),...
-%             mean(squash(Ymult(:,thisorder(2,:)))),...
-%             mean(squash(Ysig(:,1:3))),...
-%             mean(squash(Ysig(:,4:6))),...
-%             mean(squash(Ysig(:,thisorder(1,:)))),...
-%             mean(squash(Ysig(:,thisorder(2,:))))];
+        % Add to matrix
+        Rmult = [Rmult; Ymult(:)];
+        Rsig = [Rsig; Ysig(:)];
+        tidx = [tidx; ones(prod(size(Ymult)),1)*trl];
+        dm = [dm; thisdm];
         
     end
-    
+
+    % Do GLM on each trial
+    betas_mult = nan(nTrls,2);
+    betas_sig = nan(nTrls,2);
+    for trl = 1:nTrls
+        B = pinv([dm(tidx==trl,:) ones(sum(tidx==trl),1)]) * Rmult(tidx==trl,:);
+        betas_mult(trl,:) = B(1:2,:)';
+        B = pinv([dm(tidx==trl,:) ones(sum(tidx==trl),1)]) * Rsig(tidx==trl,:);
+        betas_sig(trl,:) = B(1:2,:)';
+    end
+
+    % Log means
+    means_mult = nan(nTrls,2);
+    means_sig = nan(nTrls,2);
+    for trl = 1:nTrls
+        means_mult(trl,:) = [mean(Rmult(tidx==trl & dm(:,1)==1)) mean(Rmult(tidx==trl & dm(:,1)==0))];
+        means_sig(trl,:) = [mean(Rsig(tidx==trl & dm(:,1)==1)) mean(Rsig(tidx==trl & dm(:,1)==0))];
+    end 
+
     % save to overall
     if size(behav,2)==30
         tmp = behav(:,[1:3 5:6 8:10 23:26 30]);
@@ -419,26 +462,20 @@ for s = 1:N
     end
 
     tmp1 = tmp;
-    tmp1.Reactivated_path = repmat({'path1'},nTrls,1);
-    tmp1.Ymult_reactivation = thisreactivation(:,1);
-    tmp1.Ysig_reactivation = thisreactivation(:,5);
+    tmp1.Reactivated_path = repmat({'rewarding'},nTrls,1);
+    tmp1.Ymult_reactivation = betas_mult(:,1);
+    tmp1.Ysig_reactivation = betas_sig(:,1);
+    tmp1.Mmult_reactivation = means_mult(:,1);
+    tmp1.Msig_reactivation = means_sig(:,1);
     
     tmp2 = tmp;
-    tmp2.Reactivated_path = repmat({'path2'},nTrls,1);
-    tmp2.Ymult_reactivation = thisreactivation(:,2);
-    tmp2.Ysig_reactivation = thisreactivation(:,6);
-
-    tmp3 = tmp;
-    tmp3.Reactivated_path = repmat({'rewarding'},nTrls,1);
-    tmp3.Ymult_reactivation = thisreactivation(:,3);
-    tmp3.Ysig_reactivation = thisreactivation(:,7);
+    tmp2.Reactivated_path = repmat({'aversive'},nTrls,1);
+    tmp2.Ymult_reactivation = betas_mult(:,2);
+    tmp2.Ysig_reactivation = betas_sig(:,2);
+    tmp2.Mmult_reactivation = means_mult(:,2);
+    tmp2.Msig_reactivation = means_sig(:,2);
     
-    tmp4 = tmp;
-    tmp4.Reactivated_path = repmat({'aversive'},nTrls,1);
-    tmp4.Ymult_reactivation = thisreactivation(:,4);
-    tmp4.Ysig_reactivation = thisreactivation(:,8);
-    
-    reactivation = [reactivation; tmp1; tmp2; tmp3; tmp4];
+    reactivation = [reactivation; tmp1; tmp2];
     
 end
 reactivation.Choice(reactivation.Choice==2) = 0; % avoid
@@ -446,16 +483,8 @@ reactivation.Choice = categorical(reactivation.Choice,[0 1],{'avoid','approach'}
 
 writetable(reactivation,'D:\2020_RiskyReplay\results\reactivation\reactivation.csv');
 
-idx = reactivation.Forced==0 & contains(reactivation.Reactivated_path,'path');
-% lme = fitglme(reactivation(idx,:),'Ymult_reactivation ~ Reactivated_path + (1|Subject)');
-lme = fitglme(reactivation(idx,:),'Ysig_reactivation ~ Reactivated_path + (1|Subject)')
+%% Plot reactivation
 
-
-idx = reactivation.Forced==0 & ~contains(reactivation.Reactivated_path,'path');
-% lme = fitglme(reactivation(idx,:),'Ymult_reactivation ~ Reactivated_path + (1|Subject)');
-lme = fitglme(reactivation(idx,:),'Ysig_reactivation ~ Reactivated_path + (1|Subject)')
-
-% Plot
 plotdata = nan(s,2,2);
 for s = 1:N
     for c = 1:2 % avoid, approach
@@ -562,7 +591,7 @@ for s = 1:thisN
     S = thesesubjects(s);
     disp(['Extracting path-specific replay for ' subjects{S} '...'])
     
-    %% Get data
+    % Get data
     % Get replay for optimised classifier training time
     switch epochtype
         case 'planning'
@@ -575,7 +604,7 @@ for s = 1:thisN
     % load behaviour
     load(fullfile(dir_behav,subjects{S},[subjects{S} '_parsedBehav.mat']))
     behav = behav.task;
-    
+
     % add path recency as a variable
     halfwaypoint = find(behav.Block==6,1,'first'); % start of second half
     halfidx = ([1:size(behav,1)]' >= halfwaypoint)+1;
@@ -718,8 +747,7 @@ for s = 1:thisN
     % match up the replay data to the behavioural data
     load(fullfile(dir_meg,['7_merged_ds-' num2str(Fs) 'Hz'],[subjects{S} '_task_' num2str(Fs) 'Hz.mat'])); % loads 'merged' variable
     trialinfo = merged.trialinfo;
-    clear merged
-    
+
     idx = nan(size(replay,1),1); % converts the [block trial] index into the row index in 'behav'
     for trl = 1:length(idx)
         if trialinfo(trl,1)==0
@@ -728,6 +756,22 @@ for s = 1:thisN
             idx(trl,1) = find(behav.Practice==0 & behav.Block==trialinfo(trl,1) & behav.Trial==trialinfo(trl,2));
         end
     end
+
+    % Remove trials with dead lags (bad trials, too short)
+    ridx = zeros(size(replay,1),1);
+    for trl = 1:size(replay,1)
+        if merged.time{trl}(end) < size(replay,5)*10/1000
+            badtrials(trl,1) = 1;
+        end
+    end
+    disp(['--- Removing ' num2str(sum(ridx)) ' trials for being shorter than the maximum lag'])
+
+    if any(ridx)
+        disp('')
+    end
+
+    idx = idx(~ridx,:);
+    replay = replay(~ridx,:,:,:,:);
     
     % crop the 'behav' variable to only include those with an associated replay trial (e.g., some MEG blocks are missing)
     behav = behav(sort(idx),:);
@@ -764,7 +808,7 @@ for s = 1:thisN
         Y{s}.(['RW_a' num2str(round(alphas(a)*10)) '_path2']) = squeeze(pathlearning(a,:,2))';
     end
     
-    %% Organise replay
+    % Organise replay
     
     % sort into good vs bad paths
     nTrls   = size(replay,1); % trials
@@ -798,6 +842,7 @@ for s = 1:thisN
 end
 
 %% Plot rewarding vs aversive
+
 pathDefinition = 'pos-neg'; % 'pos-neg' (only trials where one path is better than the other) 
                             % 'better-worse' (all trials, including those where both are positive or both are negative)
 cmap = [0, 238, 144
@@ -842,14 +887,14 @@ for s = 1:thisN
 end
 
 figure
-for i = 1:2
+for i = 1:2 % path type
     opts = [];
     opts.avCol = cmap(i,:);
     opts.nullThresh = true;
     cc = 0;
-    for c = 1:2
+    for c = 1:2 % choice
         for g = [3 1 2]
-            cc = cc+1;
+            cc = cc+1;c
             subplot(2,3,cc)
             opts.g = g;
             d = squeeze(pdata(:,c,i,:,g,:));

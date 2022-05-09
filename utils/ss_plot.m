@@ -4,7 +4,7 @@ function [output] = ss_plot(d,opts)
 gNames = {'Forward','Backward','Forward-Backward'};
 
 if ~isfield(opts,'x')
-    opts.x = 1:size(d,3); % x axis
+    opts.x = linspace(10,size(d,3)*10,size(d,3)); % x axis
 end
 x = opts.x;
 
@@ -182,5 +182,6 @@ if opts.makeplot
     set(gca,'ticklength',[0 0])
     xlabel('Lags (ms)')
     ylabel('Sequenceness')
+    xlim(opts.x([1 end]))
 end
 end

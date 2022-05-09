@@ -30,8 +30,8 @@ for m1 = 1:nModels
         m2      = tmp.info.m2;
         err     = tmp.err;
         fitvals = tmp.fitvals;
-        d       = tmp.d;
         model   = tmp.model;
+        d       = tmp.d;
 
         recovery{m1}(it,:,1) = tmp.info.origParams;
     

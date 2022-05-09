@@ -1,25 +1,26 @@
 function generate_jobs_replay(subject,traintime,nulldata,lambda)
 % This script gets the template and duplicates them, according to the names
 % of the 'opts' files in 'batch'
+% Made for HOLLY (not myriad)
 
 %% Settings
 
 % Directories on cluster
-datadir = '/home/skgtjm6/Scratch';
-scriptdir = '~/Scratch/2020_RiskyReplay/scripts';
+datadir = '/data/holly-host/jmcfadyen';
+scriptdir = '/data/holly-host/jmcfadyen/2020_RiskyReplay/scripts';
+batchdir = '/data/holly-host/jmcfadyen/2020_RiskyReplay/scripts/batch/';
 
 % Directories on work PC
 dir_batch = 'D:\2020_RiskyReplay\approach-avoid-replay\analysis\batch';
 
 % Job settings
-timechar = '0:10:00'; % max job duration (hours : minutes : seconds)
 functionName = 'cluster_replay'; % the function that will be called on the cluster
-RAM = '5G'; % RAM allocated to each job
+RAM = '16G'; % RAM allocated to each job
 
 %% Read in jobs
 
 % Read in template file
-fid = fopen('template_replay.sh');
+fid = fopen('template_replay_holly.sh');
 tline = fgetl(fid);
 template = {};
 while ischar(tline)
@@ -40,8 +41,7 @@ for i = 1:length(template) % for each line...
     L = template{i}; % get this line
 
     % see if there are any tags to be replaced with variables
-    L = strrep(L,'[TIME]',timechar);
-    L = strrep(L,'[RAM]',['mem=' RAM]);
+    L = strrep(L,'[RAM]',[RAM]);
     L = strrep(L,'[DATADIR]',datadir);
     L = strrep(L,'[SCRIPTDIR]',scriptdir);
 

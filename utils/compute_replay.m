@@ -13,15 +13,15 @@ tp = [1 2; 2 3; 4 5; 5 6]; % transition pairs
 nTransitions = size(tp,1);
 
 % Lags
-maxLag = 3; % in seconds
+maxLag = 0.6; % in seconds
 maxLag = maxLag / (1/data.fsample); % convert to samples
 
-bins = 10; % consider 10 Hz alpha (or set to 'maxLag' to ignore)
+bins = data.fsample / 10; % consider 10 Hz alpha (or set to 'maxLag' to ignore)
 
 %% Compute replay per trial
 
 sequenceness = nan(nTrls,nPerms,3,nTransitions,maxLag);
-parfor trl = 1:nTrls
+for trl = 1:nTrls
    
     disp(['Computing replay for trial ' num2str(trl) ' of ' num2str(nTrls) '...'])
     

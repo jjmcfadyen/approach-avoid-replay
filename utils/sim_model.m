@@ -11,6 +11,12 @@ randtype = 'both'; % 'one' or 'both'
 
 nTrls = size(d,1);
 
+if isfield(d,'Choice')
+    if any(d.Choice==2)
+        d.Choice(d.Choice==2) = 0;
+    end
+end
+
 if nargin==2
     params = [];
 else
@@ -109,6 +115,9 @@ else
     nCombos = fliplr(combvec(1:3,1:3)');
 end
 
+d.pV_1 = nan(size(d,1),1); % perceived path value
+d.pV_2 = nan(size(d,1),1); % perceived path value
+
 pchoice = nan(nTrls,2); % cols: approach, avoid
 errorcatch = false;
 for trl = 1:nTrls
@@ -128,13 +137,23 @@ for trl = 1:nTrls
             case 'twopath'
                 if qlearner
                     if neglearn
+
                         thisnv = [old_nV(negpos(1),1) old_nV(negpos(2),2)];
                         V = [sum(thisnv.*[d.P(trl) 1-d.P(trl)]) params.threshold];
+                        
+                        d.pV_1(trl) = thisnv(1);
+                        d.pV_2(trl) = thisnv(2);
                     else
                         V = [sum(old_nV.*[d.P(trl) 1-d.P(trl)]) params.threshold];
+
+                        d.pV_1(trl) = old_nV(1);
+                        d.pV_2(trl) = old_nV(2);
                     end
                 else
                     V = [d.EV(trl) params.threshold];
+
+                    d.pV_1(trl) = d.nV_1(trl);
+                    d.pV_2(trl) = d.nV_2(trl);
                 end
             case 'random'
                 V = [params.threshold 0]; % threshold indicates general preference for approach (more positive) vs avoid (more negative)
@@ -177,12 +196,20 @@ for trl = 1:nTrls
                     if qlearner
                         if ~neglearn
                             EV = old_nV(path(p))*P;
+
+                            d.pV_1(trl) = old_nV(1);
+                            d.pV_2(trl) = old_nV(2);
                         else
                             thisnv = [old_nV(negpos(1),1) old_nV(negpos(2),2)];
                             EV = thisnv(path(p))*P;
+
+                            d.pV_1(trl) = thisnv(1);
+                            d.pV_2(trl) = thisnv(2);
                         end
                     else
                         EV = d.(['nV_' num2str(path(p))])(trl)*P;
+                        d.pV_1(trl) = d.nV_1(trl);
+                        d.pV_2(trl) = d.nV_2(trl);
                     end
     
                     if params.nThresh==1

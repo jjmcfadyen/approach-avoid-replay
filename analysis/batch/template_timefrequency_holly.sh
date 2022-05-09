@@ -13,4 +13,6 @@
 #$ -l vf=[RAM]
 #$ -l h_vmem=[RAM]
 
-time /share/apps/matlab -nosplash -nodesktop -nodisplay -r "cd('[SCRIPTDIR]'); [FUNCTION]('[ARGS]')"
+#$ -t 1
+
+time /share/apps/MATLAB/R2021a/bin/matlab -nosplash -nodesktop -nodisplay -singleCompThread -softwareopengl -nojvm -r "cd('[SCRIPTDIR]'); addpath('utils'); [FUNCTION]('[SUBJECT]')"

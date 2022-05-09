@@ -123,8 +123,47 @@ for (subject in unique(d$Subject)){
     d$Ysig_rewarding[idx] <- r$Ysig_reactivation[r$Reactivated_path=="rewarding"]
     d$Ysig_aversive[idx] <- r$Ysig_reactivation[r$Reactivated_path=="aversive"]
     
+    d$Mmult_rewarding[idx] <- r$Mmult_reactivation[r$Reactivated_path=="rewarding"]
+    d$Mmult_aversive[idx] <- r$Mmult_reactivation[r$Reactivated_path=="aversive"]
+    d$Msig_rewarding[idx] <- r$Msig_reactivation[r$Reactivated_path=="rewarding"]
+    d$Msig_aversive[idx] <- r$Msig_reactivation[r$Reactivated_path=="aversive"]
+    
   }
 }
+
+#########################################################
+# ADD BEHAVIOURAL STRATEGIES & COUNTERFACTUAL UTILITY
+#########################################################
+
+bd <- read.csv('D:/2020_RiskyReplay/results/modelling/behavmodeltable.csv')
+countd <- read.csv('D:/2020_RiskyReplay/results/modelling/counterfactualtable.csv')
+
+d$bModelNum <- rep(NA,nrow(d))
+d$bCalculationType <- rep(NA,nrow(d))
+d$bPathChoice <- rep(NA,nrow(d))
+
+d$utility_goal_mCalculate <- rep(NA,nrow(d))
+d$utility_counter_mCalculate <- rep(NA,nrow(d))
+d$utility_goal_mLearn <- rep(NA,nrow(d))
+d$utility_counter_mLearn <- rep(NA,nrow(d))
+
+for (subject in unique(d$Subject)){
+  
+  d$bModelNum[d$Subject==subject] = bd$bModelNum[bd$Subject==subject]
+  d$bCalculationType[d$Subject==subject] = bd$bCalculationType[bd$Subject==subject]
+  d$bPathChoice[d$Subject==subject] = bd$bPathChoice[bd$Subject==subject]
+  
+  d$utility_goal_mCalculate[d$Subject==subject] = countd$utility_goal_mCalculate[countd$Subject==subject]
+  d$utility_counter_mCalculate[d$Subject==subject] = countd$utility_counter_mCalculate[countd$Subject==subject]
+  d$utility_goal_mLearn[d$Subject==subject] = countd$utility_goal_mLearn[countd$Subject==subject]
+  d$utility_counter_mLearn[d$Subject==subject] = countd$utility_counter_mLearn[countd$Subject==subject]
+  
+}
+
+d$bModelNum <- as.factor(d$bModelNum)
+d$bCalculationType <- as.factor(d$bCalculationType)
+d$bPathChoice <- as.factor(d$bPathChoice)
+
 
 #######################################
 # PCA ON QUESTIONNAIRES
@@ -242,21 +281,6 @@ md <- d %>%
   mutate(Replay_type=gsub("Replay_","",Replay_type))
 md$Replay_type <- as.factor(md$Replay_type)
 
-md$Ymult <- rep(NA,nrow(md))
-md$Ymult[md$Replay_type=="rewarding"] <- md$Ymult_rewarding[md$Replay_type=="rewarding"]
-md$Ymult[md$Replay_type=="aversive"] <- md$Ymult_aversive[md$Replay_type=="aversive"]
-md$Ymult[md$Replay_type=="differential"] <- md$Ymult_rewarding[md$Replay_type=="differential"] - md$Ymult_aversive[md$Replay_type=="differential"]
-
-md$Ysig <- rep(NA,nrow(md))
-md$Ysig[md$Replay_type=="rewarding"] <- md$Ysig_rewarding[md$Replay_type=="rewarding"]
-md$Ysig[md$Replay_type=="aversive"] <- md$Ysig_aversive[md$Replay_type=="aversive"]
-md$Ysig[md$Replay_type=="differential"] <- md$Ysig_rewarding[md$Replay_type=="differential"] - md$Ysig_aversive[md$Replay_type=="differential"]
-
-md <- md %>%
-  group_by(Subject,Lag) %>%
-  mutate(Ysigbin = Ysig>median(Ysig,na.rm=TRUE)) %>%
-  as.data.frame()
-
 md$PathNum <- rep(NA,nrow(md))
 md$PathNum[md$Replay_type=="rewarding" & md$Path1Type=="rewarding"] <- 1
 md$PathNum[md$Replay_type=="rewarding" & md$Path1Type=="aversive"] <- 2
@@ -291,21 +315,17 @@ md$PathVal <- scale(md$PathVal,center=TRUE,scale=FALSE)
 md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
 md$PathProb <- scale(md$PathProb,center=TRUE,scale=FALSE)
 md$PathRecency <- scale(md$PathRecency,center=TRUE,scale=FALSE)
-md$Ymult <- scale(md$Ymult,center=TRUE,scale=FALSE)
-md$Ysig <- scale(md$Ysig,center=TRUE,scale=FALSE)
 
 # MODEL 2
-m2 <- lmer(Sequenceness ~ Replay_type*Choice*Ymult + RT + (1|Subject/Lag),
+m2 <- lmer(Sequenceness ~ Replay_type*Choice*bCalculationType + RT + (1|Subject/Lag),
            data=md, REML=FALSE,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
 summary(m2)
-interact_plot(m2,pred=Ymult,modx=Replay_type,mod2=Choice,interval=TRUE)
-cat_plot(m2,pred=Choice,modx=Replay_type,interval=TRUE)
-
 round(range(vif(m2)),2)
 round(durbinWatsonTest(resid(m2)),2)
 
+e <- emmeans(m2,pairwise~Replay_type*Choice)
 
 # MODEL 3
 m3 <- lmer(Sequenceness ~ PathRecency*Replay_type*PathProb + RT + (1|Subject/Lag),
@@ -361,6 +381,11 @@ md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
 md$Replay_differential <- scale(md$Replay_differential,center=TRUE,scale=FALSE)
 md$Replay_rewarding <- scale(md$Replay_rewarding,center=TRUE,scale=FALSE)
 md$Replay_aversive <- scale(md$Replay_aversive,center=TRUE,scale=FALSE)
+
+md$utility_goal_mCalculate <- scale(md$utility_goal_mCalculate,center=TRUE,scale=FALSE)
+md$utility_counter_mCalculate <- scale(md$utility_counter_mCalculate,center=TRUE,scale=FALSE)
+md$utility_goal_mLearn <- scale(md$utility_goal_mLearn,center=TRUE,scale=FALSE)
+md$utility_counter_mLearn <- scale(md$utility_counter_mLearn,center=TRUE,scale=FALSE)
 
 # MODEL 5
 m5 <- glmer(Choice ~ EV*Replay_differential + Certainty + RT + (1|Subject/Lag),
@@ -549,3 +574,103 @@ pred <- jtools::make_predictions(m7,
 pred <- evplots(pred)
 write.csv(pred,"ev_replay_anx-low.csv")
 
+
+
+
+#######################################
+# OVERALL STATE REACTIVATION
+#######################################
+
+# Rearrange so that replay is spread out across rows instead of columns
+md <- d %>%
+  gather(Replay_type, Sequenceness, c(Replay_rewarding:Replay_differential,Replay_average), factor_key=TRUE) %>%
+  mutate(Replay_type=gsub("Replay_","",Replay_type))
+md$Replay_type <- as.factor(md$Replay_type)
+
+md$Ymult <- rep(NA,nrow(md))
+md$Ymult[md$Replay_type=="rewarding"] <- md$Ymult_rewarding[md$Replay_type=="rewarding"]
+md$Ymult[md$Replay_type=="aversive"] <- md$Ymult_aversive[md$Replay_type=="aversive"]
+md$Ymult[md$Replay_type=="differential"] <- md$Ymult_rewarding[md$Replay_type=="differential"] - md$Ymult_aversive[md$Replay_type=="differential"]
+
+md$Ysig <- rep(NA,nrow(md))
+md$Ysig[md$Replay_type=="rewarding"] <- md$Ysig_rewarding[md$Replay_type=="rewarding"]
+md$Ysig[md$Replay_type=="aversive"] <- md$Ysig_aversive[md$Replay_type=="aversive"]
+md$Ysig[md$Replay_type=="differential"] <- md$Ysig_rewarding[md$Replay_type=="differential"] - md$Ysig_aversive[md$Replay_type=="differential"]
+
+md$Mmult <- rep(NA,nrow(md))
+md$Mmult[md$Replay_type=="rewarding"] <- md$Mmult_rewarding[md$Replay_type=="rewarding"]
+md$Mmult[md$Replay_type=="aversive"] <- md$Mmult_aversive[md$Replay_type=="aversive"]
+md$Mmult[md$Replay_type=="differential"] <- md$Mmult_rewarding[md$Replay_type=="differential"] - md$Mmult_aversive[md$Replay_type=="differential"]
+
+md$Msig <- rep(NA,nrow(md))
+md$Msig[md$Replay_type=="rewarding"] <- md$Msig_rewarding[md$Replay_type=="rewarding"]
+md$Msig[md$Replay_type=="aversive"] <- md$Msig_aversive[md$Replay_type=="aversive"]
+md$Msig[md$Replay_type=="differential"] <- md$Msig_rewarding[md$Replay_type=="differential"] - md$Msig_aversive[md$Replay_type=="differential"]
+
+
+md$PathNum <- rep(NA,nrow(md))
+md$PathNum[md$Replay_type=="rewarding" & md$Path1Type=="rewarding"] <- 1
+md$PathNum[md$Replay_type=="rewarding" & md$Path1Type=="aversive"] <- 2
+md$PathNum[md$Replay_type=="aversive" & md$Path1Type=="rewarding"] <- 2
+md$PathNum[md$Replay_type=="aversive" & md$Path1Type=="aversive"] <- 1
+md$PathNum <- as.factor(md$PathNum)
+
+md$PathVal <- rep(NA,nrow(md))
+md$PathVal[md$Replay_type=="rewarding"] <- apply(select(filter(md,Replay_type=="rewarding"),nV_1:nV_2),1,max)
+md$PathVal[md$Replay_type=="aversive"] <- apply(select(filter(md,Replay_type=="aversive"),nV_1:nV_2),1,min)
+
+md$PathProb <- rep(NA,nrow(md))
+md$PathProb[md$Replay_type=="rewarding"] <- md$RewProb[md$Replay_type=="rewarding"]
+md$PathProb[md$Replay_type=="aversive"] <- round(1-md$RewProb[md$Replay_type=="aversive"],1)
+
+md$PathCertainty <- md$PathProb
+md$PathCertainty[which(md$PathProb==0.1)] <- rep(0.9,sum(md$PathProb==0.1,na.rm=TRUE))
+md$PathCertainty[which(md$PathProb==0.3)] <- rep(0.7,sum(md$PathProb==0.3,na.rm=TRUE))
+
+md$PathRecency <- rep(NA,nrow(md))
+md$PathRecency[md$Replay_type=="rewarding"] <- md$RewPathRecency_block[md$Replay_type=="rewarding"]
+md$PathRecency[md$Replay_type=="aversive"] <- md$LossPathRecency_block[md$Replay_type=="aversive"]
+md$PathRecency <- log(md$PathRecency+1)
+
+md$Choice <- as.factor(md$Choice)
+
+md <- filter(md,
+             Lag>10,Lag<100,
+             Replay_type=="rewarding" | Replay_type=="aversive")
+
+md <- md[abs(scale(md$Ysig))<10,]
+
+md$PathVal <- scale(md$PathVal,center=TRUE,scale=FALSE)
+md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
+md$PathProb <- scale(md$PathProb,center=TRUE,scale=FALSE)
+md$PathRecency <- scale(md$PathRecency,center=TRUE,scale=FALSE)
+md$Ymult <- scale(md$Ymult,center=TRUE,scale=FALSE)
+md$Ysig <- scale(md$Ysig,center=TRUE,scale=FALSE)
+md$Sequenceness <- scale(md$Sequenceness,center=TRUE,scale=FALSE)
+
+# MODEL 9
+m9 <- lmer(Ysig ~ Choice*Replay_type + RT + (1|Subject),
+            data=filter(md,Lag==md$Lag[1]), REML=FALSE,
+            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+summary(m9)
+cat_plot(m9,pred=Choice,modx=Replay_type)
+
+e <- emmeans(m9,pairwise~Choice*Replay_type)
+e <- as.data.frame(e$emmeans)
+
+# MODEL 10
+m10 <- lmer(Sequenceness ~ Replay_type*Choice + Ysig + RT + (1|Subject/Lag),
+           data=md, REML=FALSE,
+           control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+
+summary(m10)
+
+jtools::effect_plot(m10,pred=Ysig,interval=TRUE) + 
+  theme_classic() + 
+  coord_cartesian(xlim=c(-0.02,0.02),ylim=c(-0.03,0.03))
+
+cat_plot(m10,pred=Choice,modx=Replay_type)
+
+e <- emmeans(m10,pairwise~Choice*Replay_type)
+e <- as.data.frame(e$emmeans)

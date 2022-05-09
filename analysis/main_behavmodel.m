@@ -25,7 +25,7 @@ nModels = length(models);
 
 %% Simulate models to get performance
 
-rng(15101993);
+rng(1);
 
 numStart = 1;
 nIterations = 100;
@@ -59,7 +59,7 @@ for it = 1:nIterations
     nLL = nan(nModels,1);
     BIC = nan(nModels,1);
     ACC = nan(nModels,1);
-    params = nan(nModels,size(optfit.params,size(paramlog,4)));
+    params = nan(nModels,size(optfit.params,3));
     parfor m = 1:nModels
         
         % optimise parameters to perfect choice data
@@ -110,6 +110,7 @@ for i = 1:3
     elseif i==2
         y = optfit.bic;
         thistitle = 'BIC';
+        y = y(:,end) - y;
     elseif i==3
         y = optfit.acc;
         thistitle = 'Accuracy';
@@ -280,7 +281,7 @@ end
 
 modelorder = 1:nModels;
 
-excludedSubjects = {}; %{'263098','680913'};
+excludedSubjects = {'263098','680913'};
 includedidx = ~ismember(subjects,excludedSubjects);
 
 % get negative log likelihoods
@@ -299,20 +300,42 @@ end
 
 % group model evidence
 figure
-bar(sum(BIC(includedidx,modelorder)))
+bar(sum(BIC(includedidx,end)) - sum(BIC(includedidx,modelorder)))
 title('group model evidence')
 set(gca,'xtick',1:nModels)
 set(gca,'xticklabels',mnames(modelorder))
 
 % subject winning model histogram
-[~,winner] = min(BIC(:,modelorder),[],2);
+[~,winner] = min(BIC(includedidx,modelorder),[],2);
 figure
 histogram(winner(includedidx))
 title('Winning model per subject')
 set(gca,'xtick',1:nModels)
 set(gca,'xticklabels',mnames(modelorder))
 
-% show individual subjects, ordered by accuracy
+% make table to put into replay analyses
+winnertable = array2table(subjects,'variablenames',{'Subject'});
+winnertable.bModelNum = winner;
+
+winnertable.bCalculationType = cell(N,1);
+winnertable.bPathChoice = cell(N,1);
+for s = 1:N
+    thismodel = mnames{winnertable.bModelNum(s)};
+    if contains(thismodel,'Q') || strcmp(thismodel,'null')
+        winnertable.bCalculationType{s} = 'caching';
+    else
+        winnertable.bCalculationType{s} = 'calculating';
+    end
+    if contains(thismodel,'optimal')
+        winnertable.bPathChoice{s} = 'both';
+    else
+        winnertable.bPathChoice{s} = 'one';
+    end
+end
+
+writetable(winnertable,'D:\2020_RiskyReplay\results\modelling\behavmodeltable.csv');
+
+% get acc
 acc = nan(N,1);
 for s = 1:N
 
@@ -324,6 +347,20 @@ for s = 1:N
 
 end
 
+% compare accuracy between caching and calculating
+gacc = cell(1,2);
+for g = 1:2
+    if g==1
+        sidx = find(contains(winnertable.bCalculationType,'calculating'));
+    else
+        sidx = find(contains(winnertable.bCalculationType,'caching'));
+    end
+    gacc{g} = acc(sidx);
+end
+
+[h,p,~,stats] = ttest2(gacc{1},gacc{2});
+
+% show individual subjects, ordered by accuracy
 [sorted,sortidx] = sort(acc,'descend');
 
 figure
@@ -378,6 +415,14 @@ if ~onCluster
     recovery = cell(1,nModels);
     paramlog = nan(nModels,nModels,nIterations,maxnp);
 end
+
+D = cell(1,N);
+for s = 1:N
+    d = parse_behav(subjects{randi(N)},dir_data); % randomly select subject protocol for simulations
+    d = d(:,1:find(contains(d.Properties.VariableNames,'Choice'))-1);
+    D{s} = d;
+end
+
 for m1 = 1:nModels
 
     disp('=====================================================')
@@ -424,9 +469,7 @@ for m1 = 1:nModels
         parfor it = 1:nIterations
     
             % simulate new data
-            d = parse_behav(subjects{randi(N)},dir_data); % randomly select subject protocol for simulations
-            d = d(:,1:23);
-            d.Choice(d.Choice==2) = 0; % 1 = approach, 0 = avoid
+            d = D{randi(N)} % randomly select subject protocol for simulations
 
             % generate predicted data
             [~, output, thisd] = sim_model(d,models(m1),squeeze(origP(it,:)));
@@ -455,6 +498,9 @@ for m1 = 1:nModels
     else
 
         for it = 1:nIterations
+
+            % simulate new data
+            d = D{randi(N)};% randomly select subject protocol for simulations
 
             % generate predicted data
             [~, output, thisd] = sim_model(d,models(m1),squeeze(origP(it,:)));
@@ -507,26 +553,38 @@ end
 
 %% Compute metrics
 
-% % % acc = nan(1,nModels);
-% % % misclassification = nan(1,nModels);
-% % % precision = nan(1,nModels);
-% % % sensitivity = nan(1,nModels);
-% % % specificity = nan(1,nModels);
-% % % for m1 = 1:nModels
-% % %  
-% % %     [~,idx] = min(squeeze(BIC(m1,:,:)));
-% % %     TP(m1) = sum(idx==m1);
-% % %     TN(m1) = sum(idx~=m1);
-% % % 
-% % %     for m2 = 1:nModels
-% % % 
-% % %         [~,idx] = min(squeeze(BIC(:,m2,:)));
-% % % 
-% % %     end
-% % % end
+modelorder = 1:nModels;
 
 % Plot parameter recovery
-modelorder = 1:nModels;
+acc = nan(nModels,4);
+sensitivity = nan(nModels,4);
+specificity = nan(nModels,4);
+for m1 = 1:nModels
+
+    y = abs(corr(squeeze(recovery{modelorder(m1)}(:,:,1)),squeeze(recovery{modelorder(m1)}(:,:,2))));
+
+    if any([1 2 3 4]==m1)
+        pidx = [1 3];
+    elseif any([5 6 7]==m1)
+        pidx = [1 2 3];
+    elseif any([8:13 17:22 26:27]==m1)
+        pidx = [1 3 4];
+    elseif any([14:16 23:25]==m1)
+        pidx = [1:4];
+    end
+
+    for p = 1:size(y,2)
+
+        TP = y(p,p);
+        FP = mean(y(:,p));
+        FN = mean(y(p,setdiff(1:size(y,2),p)));
+        TN = mean(mean(y(setdiff(1:size(y,2),p),setdiff(1:size(y,2),p))));
+    
+        acc(m1,pidx(p)) = (TP+TN)/(TP+TN+FP+FN);
+        sensitivity(m1,pidx(p)) = TP/(TP+FN);
+        specificity(m1,pidx(p)) = TN/(TN+FP);
+    end
+end
 
 figure
 for m = 1:nModels
@@ -549,8 +607,24 @@ y = nan(nModels,nModels);
 for m1 = 1:nModels
     [~,idx] = min(squeeze(BIC(m1,:,:)));
     for m2 = 1:nModels
-        y(m1,m2) = mean(idx==m2);
+        y(m1,m2) = sum(idx==m2);
     end
+end
+
+acc = nan(1,nModels);
+sensitivity = nan(1,nModels);
+specificity = nan(1,nModels);
+for m1 = 1:nModels
+ 
+    TP = y(m1,m1);
+    FP = sum(y(:,m1));
+    FN = sum(y(m1,setdiff(1:nModels,m1)));
+    TN = sum(sum(y(setdiff(1:nModels,m1),setdiff(1:nModels,m1))));
+
+    acc(m1) = (TP+TN)/(TP+TN+FP+FN);
+    sensitivity(m1) = TP/(TP+FN);
+    specificity(m1) = TN/(TN+FP);
+
 end
 
 figure
@@ -564,3 +638,60 @@ set(gca,'ytick',1:length(modelorder))
 set(gca,'yticklabels',mnames(modelorder))
 xlabel('Generative model')
 ylabel('Winning predictive model')
+
+%% Get predicted path replay (based on counterfactual utility)
+
+% Select subjects
+excludedSubjects = {'263098','680913'};
+includedidx = ~ismember(subjects,excludedSubjects);
+
+thesesubjects = subjects(includedidx);
+thisN = length(thesesubjects);
+
+% Get winning models
+midx = [1 10 19]; % all two-path models
+BIC = nan(thisN,length(midx));
+for m = 1:length(midx)
+    BIC(:,m) = optim(midx(m)).bic(includedidx);
+end
+
+% Make table
+counterfactual = [];
+for s = 1:thisN
+
+    % Get behavioural data
+    d = parse_behav(thesesubjects{s},dir_data); 
+
+    % Get best learning model
+    thesemodels = midx([1 find(BIC(s,2:end) == min(BIC(s,2:end))) + 1]);
+
+    % Get path utility per model
+    d.utility_counter_mCalculate = nan(size(d,1),1);
+    d.utility_counter_mLearn = nan(size(d,1),1);
+    for m = thesemodels
+        if m==1
+            msubname = 'mCalculate';
+        else
+            msubname = 'mLearn';
+        end
+        [~, ~, thisd] = sim_model(d,models(m),table2array(optim(m).params(find(contains(subjects,thesesubjects{s})),:)));
+        pathvals = [thisd.pV_1 thisd.pV_2];
+        for trl = 1:size(d,1)
+            
+            if ~all(isnan(pathEV))
+                if d.Choice(trl)==1
+                    d.(['utility_counter_' msubname])(trl) = pathvals(pathvals==min(pathEV));
+                else
+                    d.(['utility_counter_' msubname])(trl) = pathvals(pathvals==max(pathEV));
+                end
+            end
+        end
+    end
+    counterfactual = [counterfactual; d];
+end
+
+% Exclude forced-choice & slow/fast RTs
+counterfactual = counterfactual(counterfactual.RT>= 5 & counterfactual.RT <= 30 & counterfactual.Forced==0,:);
+
+% Save to table for analysis in R
+writetable(counterfactual,'D:\2020_RiskyReplay\results\modelling\counterfactualtable.csv');
