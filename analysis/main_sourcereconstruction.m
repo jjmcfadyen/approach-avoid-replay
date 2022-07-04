@@ -430,7 +430,8 @@ smoothing = 12;
 addpath('D:\Toolboxes\spm12')
 spm('defaults','eeg')
 
-replaytype = 'anyreplay_nullthresh_merged_bc_4-8Hz'; 
+replaytype = 'anyreplay_nullthresh_merged_bc_120-150Hz'; 
+absolute = true;
 
 if contains(replaytype,'paths')
     excludeSubjects = {'263098','680913'};
@@ -467,6 +468,27 @@ dir_group = fullfile(dir_images,'group');
 % 
 % spm_jobman('run',matlabbatch);
 
+
+abspre = '';
+if absolute
+    for s = 1:thisN
+
+        disp(':::::::::::::::::::::::::::::::::::::::::::::::::::')
+        disp(thesesubjects{s})
+        disp(':::::::::::::::::::::::::::::::::::::::::::::::::::')
+
+        times = importdata(fullfile(subjectdir,'times'));
+
+        input = fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir',['s' num2str(smoothing) 'tstat' num2str(c) '_5mm.nii,' num2str(findMin(times,0))]);
+        output = fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir',['t0_abs_s' num2str(smoothing) 'tstat' num2str(c) '_5mm.nii']);
+        
+        V = spm_vol(input); 
+        Vout = spm_imcalc(V,output,'abs(i1)');
+
+    end
+    abspre = 't0_abs_';
+end
+
 if ~isempty(regressor)
 
     regvec = nan(thisN,1);
@@ -501,9 +523,9 @@ for tp = 1:length(timepoints)
         
         if ~(~isempty(regressor) && c==2)
             if c==1
-                thisdir = [dir_group '_onesample_' regressor '_c' num2str(c) '_s' num2str(smoothing) '_t' num2str(timepoints(tp)*1000)];
+                thisdir = [dir_group abspre 'onesample_' regressor '_c' num2str(c) '_s' num2str(smoothing) '_t' num2str(timepoints(tp)*1000)];
             elseif c==2
-                thisdir = [dir_group '_pairedsample_' regressor '_c' num2str(c) '_s' num2str(smoothing) '_t' num2str(timepoints(tp)*1000)];
+                thisdir = [dir_group abspre 'pairedsample_' regressor '_c' num2str(c) '_s' num2str(smoothing) '_t' num2str(timepoints(tp)*1000)];
             end
             if ~exist(thisdir)
                 mkdir(thisdir)
@@ -524,7 +546,7 @@ for tp = 1:length(timepoints)
                 for s = 1:thisN
                     subjectdir = fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir');
                     times = importdata(fullfile(subjectdir,'times'));
-                    matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = fullfile(subjectdir,['s' num2str(smoothing) 'tstat' num2str(thiscon) '_5mm.nii,' num2str(findMin(timepoints(tp),times))]);
+                    matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = fullfile(subjectdir,[abspre 's' num2str(smoothing) 'tstat' num2str(thiscon) '_5mm.nii,' num2str(findMin(timepoints(tp),times))]);
                 end
             elseif c==2
                 % (paired samples)
@@ -532,8 +554,8 @@ for tp = 1:length(timepoints)
                     subjectdir = fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir');
                     times = importdata(fullfile(subjectdir,'times'));
                     matlabbatch{cc}.spm.stats.factorial_design.des.pt.pair(s).scans = {
-                        fullfile(subjectdir,['s' num2str(smoothing) 'tstat1_5mm.nii,' num2str(findMin(timepoints(tp),times))])
-                        fullfile(subjectdir,['s' num2str(smoothing) 'tstat2_5mm.nii,' num2str(findMin(timepoints(tp),times))])
+                        fullfile(subjectdir,[abspre 's' num2str(smoothing) 'tstat1_5mm.nii,' num2str(findMin(timepoints(tp),times))])
+                        fullfile(subjectdir,[abspre 's' num2str(smoothing) 'tstat2_5mm.nii,' num2str(findMin(timepoints(tp),times))])
                         };
                 end
             end
@@ -623,46 +645,46 @@ for tp = 1:length(timepoints)
     end
 end
 
-% % --- average across 0 to 100 ms window
-% if contains(replaytype,'paths')
-%     C = 3; % 1 = rewarding vs aversive (paired sample t-test), 2 = differential (one-sample t-test)
-% else
-%     excludeSubjects = [];
-%     C = 1;
-% end
-% 
+% --- average across 0 to 100 ms window
+if contains(replaytype,'paths')
+    C = 3; % 1 = rewarding vs aversive (paired sample t-test), 2 = differential (one-sample t-test)
+else
+    excludeSubjects = [];
+    C = 1;
+end
+
 avgtime = [0 0.1]; % in seconds, to average across
-% clear matlabbatch
-% cc = 0;
-% for c = 1:C
-%     for s = 1:thisN
-%         
-%         times = importdata(fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir','times'));
-%         frames = find(times>=avgtime(1) & times<=avgtime(end));
-%         
-%         cc = cc+1;
-%         expression = '(';
-%         for f = 1:length(frames)
-%             matlabbatch{cc}.spm.util.imcalc.input{f,1} = fullfile(dir_images,[thesesubjects{s} '.oat'],...
-%                 'session1_replay_dir',['s' num2str(smoothing) 'tstat' num2str(c) '_5mm.nii,' num2str(frames(f))]);
-%             expression = [expression,'i' num2str(f)];
-%             if f<length(frames)
-%                 expression = [expression ' + '];
-%             else
-%                 expression = [expression ')/' num2str(length(frames))];
-%             end
-%         end
-%         matlabbatch{cc}.spm.util.imcalc.expression = expression;
-%         matlabbatch{cc}.spm.util.imcalc.output = ['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_s' num2str(smoothing) 'tstat' num2str(c) '_5mm'];
-%         matlabbatch{cc}.spm.util.imcalc.outdir = {fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir')};
-%         matlabbatch{cc}.spm.util.imcalc.var = struct('name', {}, 'value', {});
-%         matlabbatch{cc}.spm.util.imcalc.options.dmtx = 0;
-%         matlabbatch{cc}.spm.util.imcalc.options.mask = 0;
-%         matlabbatch{cc}.spm.util.imcalc.options.interp = 1;
-%         matlabbatch{cc}.spm.util.imcalc.options.dtype = 4;
-%     end
-% end
-% spm_jobman('run',matlabbatch);
+clear matlabbatch
+cc = 0;
+for c = 1:C
+    for s = 1:thisN
+        
+        times = importdata(fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir','times'));
+        frames = find(times>=avgtime(1) & times<=avgtime(end));
+        
+        cc = cc+1;
+        expression = '(';
+        for f = 1:length(frames)
+            matlabbatch{cc}.spm.util.imcalc.input{f,1} = fullfile(dir_images,[thesesubjects{s} '.oat'],...
+                'session1_replay_dir',[abspre 's' num2str(smoothing) 'tstat' num2str(c) '_5mm.nii,' num2str(frames(f))]);
+            expression = [expression,'i' num2str(f)];
+            if f<length(frames)
+                expression = [expression ' + '];
+            else
+                expression = [expression ')/' num2str(length(frames))];
+            end
+        end
+        matlabbatch{cc}.spm.util.imcalc.expression = expression;
+        matlabbatch{cc}.spm.util.imcalc.output = ['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_' abspre 's' num2str(smoothing) 'tstat' num2str(c) '_5mm'];
+        matlabbatch{cc}.spm.util.imcalc.outdir = {fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir')};
+        matlabbatch{cc}.spm.util.imcalc.var = struct('name', {}, 'value', {});
+        matlabbatch{cc}.spm.util.imcalc.options.dmtx = 0;
+        matlabbatch{cc}.spm.util.imcalc.options.mask = 0;
+        matlabbatch{cc}.spm.util.imcalc.options.interp = 1;
+        matlabbatch{cc}.spm.util.imcalc.options.dtype = 4;
+    end
+end
+spm_jobman('run',matlabbatch);
 
 % GLM on average window   
 if contains(replaytype,'paths')
@@ -676,9 +698,9 @@ for c = 1:C
 
     if ~(~isempty(regressor) && c==2)
         if c==1
-            thisdir = [dir_group '_onesample_c1_' regressor '_s' num2str(smoothing) '_avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms'];
+            thisdir = [dir_group abspre '_onesample_c1_' regressor '_s' num2str(smoothing) '_avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms'];
         elseif c==2
-            thisdir = [dir_group '_twosample_c2_' regressor '_s' num2str(smoothing) '_avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms'];
+            thisdir = [dir_group abspre '_twosample_c2_' regressor '_s' num2str(smoothing) '_avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms'];
         end
         if ~exist(thisdir)
             mkdir(thisdir)
@@ -697,15 +719,15 @@ for c = 1:C
             % (one sample)
             for s = 1:thisN
                 subjectdir = fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir');
-                matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = fullfile(subjectdir,['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_s' num2str(smoothing) 'tstat' num2str(thiscon) '_5mm.nii,1']);
+                matlabbatch{cc}.spm.stats.factorial_design.des.t1.scans{s,1} = fullfile(subjectdir,['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_' abspre 's' num2str(smoothing) 'tstat' num2str(thiscon) '_5mm.nii,1']);
             end
         elseif c==2
             % (paired samples)
             for s = 1:thisN
                 subjectdir = fullfile(dir_images,[thesesubjects{s} '.oat'],'session1_replay_dir');
                 matlabbatch{cc}.spm.stats.factorial_design.des.pt.pair(s).scans = {
-                    fullfile(subjectdir,['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_s' num2str(smoothing) 'tstat1_5mm.nii,1'])
-                    fullfile(subjectdir,['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_s' num2str(smoothing) 'tstat2_5mm.nii,1'])
+                    fullfile(subjectdir,['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_' abspre 's' num2str(smoothing) 'tstat1_5mm.nii,1'])
+                    fullfile(subjectdir,['avg' num2str(avgtime(1)*1000) '-' num2str(avgtime(end)*1000) 'ms_' abspre 's' num2str(smoothing) 'tstat2_5mm.nii,1'])
                     };
             end
         end

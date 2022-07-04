@@ -229,6 +229,88 @@ ggplot(data=pd,aes(x=score_risk,y=PCAval,group=PCAnum)) +
   facet_wrap(~PCAnum) + theme_classic()
 
 #######################################
+# POLICY CHANGE
+#######################################
+
+d$pchange_EV <- rep(NA,nrow(d)) # policy change at next same EV
+d$pchange_EV_distance <- rep(NA,nrow(d))
+d$pchange_next <- rep(NA,nrow(d))
+d$pchange_nextEV <- rep(NA,nrow(d))
+d$pchange_nextAcc <- rep(NA,nrow(d))
+d$pchange_thisImprovement <- rep(NA,nrow(d))
+d$pchange_nextImprovement <- rep(NA,nrow(d))
+for (subject in unique(d$Subject)){
+  
+  thisd <- filter(d,Subject==subject)
+  
+  trials <- unique(thisd$ExpTrial)
+  
+  for (trl in 1:length(trials)){
+    
+    currentChoice <- thisd$Choice[thisd$ExpTrial==trials[trl]][1] # take the first, as there will be multiple lags
+    nextChoice <- thisd$Choice[thisd$ExpTrial==trials[trl+1]][1]
+    
+    currentEV <- round(thisd$EV[thisd$ExpTrial==trials[trl]][1])
+    nextEV <- which(round(thisd$EV)==currentEV & thisd$ExpTrial > thisd$ExpTrial[trl])
+    if (length(nextEV)>0){
+      nextEVchoice <- thisd$Choice[thisd$ExpTrial[nextEV[1]]][1]
+      nextEVdist <- thisd$ExpTrial[nextEV[1]] - trials[trl]
+    } else {
+      nextEVchoice <- NA
+      nextEVdist <- NA
+    }
+    
+    idx <- d$Subject==subject & d$ExpTrial==trials[trl]
+    
+    d$pchange_EV[idx] <- currentChoice != nextEVchoice
+    d$pchange_EV_distance[idx] <- nextEVdist
+    d$pchange_EV_nextAcc[idx] <- thisd$Acc[thisd$ExpTrial[nextEV[1]]][1]
+    
+    d$pchange_next[idx] <- currentChoice != nextChoice
+    d$pchange_nextEV[idx] <- round(thisd$EV[thisd$ExpTrial==trials[trl+1]][1])
+    
+    d$pchange_nextAcc[idx] <- thisd$Acc[thisd$ExpTrial==trials[trl+1]][1]
+    
+    thisPerformance <- thisd$EV[thisd$ExpTrial==trials[trl]][1]
+    if (currentChoice==0){
+      thisPerformance <- (-1)*thisPerformance
+    }
+    nextPerformance <- thisd$EV[thisd$ExpTrial==trials[trl+1]][1]
+    if (currentChoice==0){
+      nextPerformance <- (-1)*nextPerformance
+    }
+    
+    d$pchange_thisImprovement[idx] <- thisPerformance
+    d$pchange_nextImprovement[idx] <- nextPerformance
+    
+  }
+}
+d$pchange_EV_nextAcc[d$pchange_EV_nextAcc==2] <- 0
+
+# Creat new 'counterfactual' replay variable - i.e. how much more the SUBOPTIMAL OUTCOME of a planned choice is replayed
+d$Replay_counterfactual <- rep(NA,nrow(d))
+d$Replay_counterfactual[d$Choice==1] <- d$Replay_aversive[d$Choice==1] - d$Replay_rewarding[d$Choice==1]
+d$Replay_counterfactual[d$Choice==0] <- d$Replay_rewarding[d$Choice==0] - d$Replay_aversive[d$Choice==0]
+
+# Shift replay to NEXT trial
+d$Replay_next_differential <- rep(NA,nrow(d))
+for (subject in unique(d$Subject)){
+  
+  thisd <- filter(d,Subject==subject)
+  
+  trials <- unique(thisd$ExpTrial)
+  
+  for (trl in 1:(length(trials)-1)){
+
+    idx1 <- d$Subject==subject & d$ExpTrial==trials[trl]
+    idx2 <- d$Subject==subject & d$ExpTrial==trials[trl+1]
+    
+    d$Replay_next_differential[idx1] <- d$Replay_differential[idx2]
+    
+  }
+}
+
+#######################################
 # BEHAVIOURAL ANALYSIS
 #######################################
 
@@ -317,7 +399,7 @@ md$PathProb <- scale(md$PathProb,center=TRUE,scale=FALSE)
 md$PathRecency <- scale(md$PathRecency,center=TRUE,scale=FALSE)
 
 # MODEL 2
-m2 <- lmer(Sequenceness ~ Replay_type*Choice*bCalculationType + RT + (1|Subject/Lag),
+m2 <- lmer(Sequenceness ~ Replay_type*Choice + RT + (1|Subject/Lag),
            data=md, REML=FALSE,
            control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
 
@@ -381,6 +463,7 @@ md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
 md$Replay_differential <- scale(md$Replay_differential,center=TRUE,scale=FALSE)
 md$Replay_rewarding <- scale(md$Replay_rewarding,center=TRUE,scale=FALSE)
 md$Replay_aversive <- scale(md$Replay_aversive,center=TRUE,scale=FALSE)
+md$Replay_counterfactual <- scale(md$Replay_counterfactual,center=TRUE,scale=FALSE)
 
 md$utility_goal_mCalculate <- scale(md$utility_goal_mCalculate,center=TRUE,scale=FALSE)
 md$utility_counter_mCalculate <- scale(md$utility_counter_mCalculate,center=TRUE,scale=FALSE)
@@ -575,7 +658,77 @@ pred <- evplots(pred)
 write.csv(pred,"ev_replay_anx-low.csv")
 
 
+# MODEL ???? - POLICY CHANGE
+md <- d %>%
+  filter(Lag>10, Lag<100, !is.na(pchange_EV), !is.na(pchange_next)) # Subject!=97403
 
+md$PE <- md$Outcome - md$EV
+md$PE <- scale(md$PE,center=TRUE,scale=FALSE)
+
+md$origEV <- md$EV
+md$EV <- scale(md$EV,center=TRUE,scale=FALSE)
+md$RT <- scale(md$RT,center=TRUE,scale=FALSE)
+md$Replay_differential <- scale(md$Replay_differential,center=TRUE,scale=FALSE)
+md$Replay_rewarding <- scale(md$Replay_rewarding,center=TRUE,scale=FALSE)
+md$Replay_aversive <- scale(md$Replay_aversive,center=TRUE,scale=FALSE)
+md$Replay_counterfactual <- scale(md$Replay_counterfactual,center=TRUE,scale=FALSE)
+md$pchange_EV_distance_exp <- scale(exp(md$pchange_EV_distance),center=TRUE,scale=FALSE)
+md$pchange_EV_distance <- scale(md$pchange_EV_distance,center=TRUE,scale=FALSE)
+md$pchange_nextEV <- scale(md$pchange_nextEV,center=TRUE,scale=FALSE)
+md$Outcome <- scale(md$Outcome,center=TRUE,scale=FALSE)
+md$pchange_nextImprovement <- scale(md$pchange_nextImprovement,center=TRUE,scale=FALSE)
+md$pchange_thisImprovement <- scale(md$pchange_thisImprovement,center=TRUE,scale=FALSE)
+
+md$Counterfactual_path_recency <- rep(NA,nrow(md))
+md$Counterfactual_path_recency[md$Choice==1] <- md$RewPathExp_half[md$Choice==1]
+md$Counterfactual_path_recency[md$Choice==0] <- md$LossPathExp_half[md$Choice==0]
+
+md$pchange_EV[md$pchangeEV=="yes"] <- 1
+md$pchange_EV[md$pchangeEV=="no"] <- 0
+md$pchange_EV <- as.factor(md$pchange_EV)
+
+md$pchange_next[md$pchangeEV=="yes"] <- 1
+md$pchange_next[md$pchangeEV=="no"] <- 0
+md$pchange_next <- as.factor(md$pchange_EV)
+
+md$pchange_EV_nextAcc <- as.factor(md$pchange_EV_nextAcc)
+
+
+m_EV <- glmer(pchange_EV ~ Choice*Replay_counterfactual*EV + pchange_EV_distance_exp + RT + (1|Subject/Lag),
+            data=md, family="binomial",
+            control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m_EV)
+round(range(vif(m_EV)),2)
+round(durbinWatsonTest(resid(m_EV)),2)
+interact_plot(m_EV,pred=EV,modx=Replay_counterfactual,mod2=Choice,
+              interval=TRUE,vary.lty=FALSE)
+
+# more complete model
+m_next <- glmer(pchange_next ~ Replay_counterfactual*pchange_nextAcc*Acc + (1|Subject/Lag),
+              data=md, family="binomial",
+              control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m_next)
+round(range(vif(m_next)),2)
+round(durbinWatsonTest(resid(m_next)),2)
+interact_plot(m_next,pred=Replay_counterfactual,modx=Choice,mod2=EV,
+              interval=TRUE,vary.lty=FALSE)
+
+
+anova(m_EV,m_next)
+
+
+
+
+
+pd <- md %>%
+  group_by(Subject,Choice,pchange_next) %>%
+  summarise(replay=mean(Replay_counterfactual))
+
+pdsum <- pd %>%
+  group_by(Choice,pchange_next) %>%
+  summarise(replay=mean(replay))
+
+ggplot(pdsum,aes(x=Choice,y=replay,group=pchange_next)) + geom_bar()
 
 #######################################
 # OVERALL STATE REACTIVATION
@@ -674,3 +827,42 @@ cat_plot(m10,pred=Choice,modx=Replay_type)
 
 e <- emmeans(m10,pairwise~Choice*Replay_type)
 e <- as.data.frame(e$emmeans)
+
+# ===========================================================================
+# Hybrid models with replay prediction
+# ===========================================================================
+
+hd <- read.csv('D:/2020_RiskyReplay/results/modelling/hybridmodelswithreplay.csv')
+
+hd$modelNum <- as.factor(hd$modelNum)
+hd$Subject <- as.factor(hd$Subject)
+
+# --------
+
+md <- hd %>%
+  filter()
+
+m <- lmer(Replay ~ replayinitiated*BIC*modelNum + (1|Subject/Lag),
+          data=hd, REML=FALSE,
+          control=lmerControl(optimizer="bobyqa",optCtrl=list(maxfun=10e6)))
+summary(m)
+
+pd <- hd %>%
+  filter(as.integer(modelNum)>4) %>%
+  group_by(Subject,Lag,modelNum) %>%
+  mutate(corr=cor.test(replayinitiated,Replay,na.rm=TRUE)[4][[1]]) %>%
+  group_by(Subject,modelNum) %>%
+  summarise(corr=mean(corr),BIC=mean(BIC)) %>%
+  arrange(Subject,BIC) %>%
+  group_by(Subject) %>%
+  mutate(modelOrder=1:n(),
+         maxModel=BIC==max(BIC))
+
+fig <- ggplot(pd, aes(x=BIC,y=corr,color=Subject)) + 
+  geom_point() + 
+  facet_wrap(~modelNum)
+ggplotly(fig)
+
+fig <- ggplot(filter(pd,maxModel==TRUE), aes(x=modelNum,y=corr,color=Subject)) + 
+  geom_point()
+ggplotly(fig)

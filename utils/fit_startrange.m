@@ -1,8 +1,8 @@
-function [startvals,fitparams,nLL] = fit_startrange(model,d,numStart)
+function [startvals,fitparams,nLL] = fit_startrange(model,d,numStart,randtype)
 % fits model using a range of starting vlaues
 
 % get function for this model
-fun_model = @(x) sim_model(d,model,x);
+fun_model = @(x) sim_model(d,model,x,randtype);
 
 % get lower and upper bounds per parameter
 pnames = fieldnames(model.params);
@@ -50,12 +50,14 @@ elseif size(startvals,1)==4
 end
 
 % optimise free parameters for each combination of starting values
+options.Display = 'none';
+
 optstart = nan(size(startvals,2),np+1);
 for v = 1:size(startvals,2)
     if numStart>1
         disp(['--- Model ' model.name ': optimising parameters for start set ' num2str(v) ' of ' num2str(size(startvals,2)) '...'])
     end
-    [x,err] = patternsearch(fun_model,startvals(:,v),[],[],[],[],lb,ub);
+    [x,err] = patternsearch(fun_model,startvals(:,v),[],[],[],[],lb,ub,options);
     optstart(v,:) = [err x'];
 end
 
